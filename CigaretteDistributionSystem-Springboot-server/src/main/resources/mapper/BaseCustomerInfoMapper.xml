@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  BaseCustomerInfoMapper XML
+  作用：承载 base_customer_info 的动态建表、插入、查询等自定义 SQL。
+  约定：namespace 对应 org.example.mapper.BaseCustomerInfoMapper，方法名与接口保持一致。
+-->
+<mapper namespace="org.example.mapper.BaseCustomerInfoMapper">
+
+    <!-- Map 结果集：保持列顺序，便于动态列处理 -->
+    <resultMap id="mapResult" type="java.util.LinkedHashMap"/>
+
+    <select id="selectAll" resultMap="mapResult">
+        SELECT * FROM `base_customer_info`
+    </select>
+
+    <select id="selectByOrderCycle" resultMap="mapResult">
+        SELECT * FROM `base_customer_info`
+        <choose>
+            <when test="orderCycles != null and orderCycles.size() > 0">
+                WHERE ORDER_CYCLE IN
+                <foreach collection="orderCycles" item="oc" open="(" separator="," close=")">
+                    #{oc}
+                </foreach>
+                AND ORDER_CYCLE &lt;&gt; #{nonVisitValue}
+            </when>
+            <otherwise>
+                WHERE ORDER_CYCLE &lt;&gt; #{nonVisitValue}
+            </otherwise>
+        </choose>
+    </select>
+
+    <update id="dropTable">
+        DROP TABLE IF EXISTS `base_customer_info`
+    </update>
+
+    <update id="createTable">
+        CREATE TABLE `base_customer_info` (
+        `ID` int NOT NULL AUTO_INCREMENT COMMENT '主键，自动编号',
+        <foreach collection="columnOrder" item="col" separator=",">
+            <choose>
+                <when test="col == null or col == '' or col.toUpperCase() == 'ID'">
+                    <!-- skip -->
+                </when>
+                <otherwise>
+                    `${col}` 
+                    <choose>
+                        <when test="columnDefinitions != null and columnDefinitions[col] != null">
+                            ${columnDefinitions[col]}
+                        </when>
+                        <otherwise>
+                            ${defaultColumnDefinition}
+                        </otherwise>
+                    </choose>
+                </otherwise>
+            </choose>
+        </foreach>
+        , PRIMARY KEY (`ID`), UNIQUE KEY `uk_cust_code` (`CUST_CODE`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci ROW_FORMAT=DYNAMIC
+    </update>
+
+    <insert id="insertRow">
+        INSERT INTO `base_customer_info`
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <foreach collection="columns" item="col" separator=",">
+                <if test="col != null and col != '' and col.toUpperCase() != 'ID'">
+                    `${col}`
+                </if>
+            </foreach>
+        </trim>
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <foreach collection="columns" item="col" separator=",">
+                <if test="col != null and col != '' and col.toUpperCase() != 'ID'">
+                    #{row[col]}
+                </if>
+            </foreach>
+        </trim>
+    </insert>
+
+    <select id="selectGroupNameStatistics" resultMap="mapResult">
+        SELECT GROUP_NAME AS group_name, COUNT(*) AS customer_cnt
+        FROM `base_customer_info`
+        WHERE GROUP_NAME IS NOT NULL AND TRIM(GROUP_NAME) &lt;&gt; ''
+        GROUP BY GROUP_NAME
+        ORDER BY customer_cnt DESC, GROUP_NAME ASC
+    </select>
+
+    <select id="countAll" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM `base_customer_info`
+    </select>
+
+    <select id="listColumns" resultMap="mapResult">
+        SHOW COLUMNS FROM `base_customer_info`
+    </select>
+
+    <select id="existsTable" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM information_schema.tables
+        WHERE table_schema = DATABASE()
+          AND table_name = 'base_customer_info'
+    </select>
+</mapper>
+

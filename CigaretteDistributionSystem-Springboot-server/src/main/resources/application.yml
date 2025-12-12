@@ -2,11 +2,18 @@ server:
   port: 28080
 
 spring:
+  config:
+    import: optional:classpath:config/encoding-rules.yml,optional:file:./config/encoding-rules.yml
   datasource:
     url: jdbc:mysql://localhost:3306/marketing?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8
     username: root
     password: LuvuubyRK*Jason1258
     driver-class-name: com.mysql.cj.jdbc.Driver
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
   jpa:
     hibernate:
@@ -26,3 +33,5 @@ logging:
     org.example.service: DEBUG
     org.example.service.algorithm: DEBUG
     org.example.service.DistributionCalculateService: DEBUG
+
+

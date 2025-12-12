@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  CigaretteDistributionPredictionPriceMapper XML
+  作用：价位段预测表（cigarette_distribution_prediction_price）的查询、批量 UPSERT、按卷烟删除。
+-->
+<mapper namespace="org.example.mapper.CigaretteDistributionPredictionPriceMapper">
+
+    <!-- 查询指定分区全部记录 -->
+    <select id="findAll" resultType="map">
+        SELECT *
+        FROM `cigarette_distribution_prediction_price`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+        ORDER BY CIG_CODE, CIG_NAME, DELIVERY_AREA
+    </select>
+
+    <!-- 单条 UPSERT -->
+    <insert id="upsert" parameterType="org.example.entity.CigaretteDistributionPredictionData">
+        INSERT INTO `cigarette_distribution_prediction_price`
+        (YEAR, MONTH, WEEK_SEQ, CIG_CODE, CIG_NAME, DELIVERY_AREA, DELIVERY_METHOD, DELIVERY_ETYPE, TAG, TAG_FILTER_CONFIG,
+         D30, D29, D28, D27, D26, D25, D24, D23, D22, D21,
+         D20, D19, D18, D17, D16, D15, D14, D13, D12, D11, D10, D9, D8, D7, D6, D5, D4, D3, D2, D1,
+         ACTUAL_DELIVERY, DEPLOYINFO_CODE, BZ)
+        VALUES
+        (#{year}, #{month}, #{weekSeq}, #{cigCode}, #{cigName}, #{deliveryArea}, #{deliveryMethod}, #{deliveryEtype}, #{tag}, #{tagFilterConfig},
+         #{d30}, #{d29}, #{d28}, #{d27}, #{d26}, #{d25}, #{d24}, #{d23}, #{d22}, #{d21},
+         #{d20}, #{d19}, #{d18}, #{d17}, #{d16}, #{d15}, #{d14}, #{d13}, #{d12}, #{d11}, #{d10}, #{d9}, #{d8}, #{d7}, #{d6}, #{d5}, #{d4}, #{d3}, #{d2}, #{d1},
+         #{actualDelivery}, #{deployinfoCode}, #{bz})
+        ON DUPLICATE KEY UPDATE
+            DELIVERY_AREA     = VALUES(DELIVERY_AREA),
+            DELIVERY_METHOD   = VALUES(DELIVERY_METHOD),
+            DELIVERY_ETYPE    = VALUES(DELIVERY_ETYPE),
+            TAG               = VALUES(TAG),
+            TAG_FILTER_CONFIG = VALUES(TAG_FILTER_CONFIG),
+            D30 = VALUES(D30), D29 = VALUES(D29), D28 = VALUES(D28), D27 = VALUES(D27), D26 = VALUES(D26),
+            D25 = VALUES(D25), D24 = VALUES(D24), D23 = VALUES(D23), D22 = VALUES(D22), D21 = VALUES(D21),
+            D20 = VALUES(D20), D19 = VALUES(D19), D18 = VALUES(D18), D17 = VALUES(D17), D16 = VALUES(D16),
+            D15 = VALUES(D15), D14 = VALUES(D14), D13 = VALUES(D13), D12 = VALUES(D12), D11 = VALUES(D11),
+            D10 = VALUES(D10), D9 = VALUES(D9), D8 = VALUES(D8), D7 = VALUES(D7), D6 = VALUES(D6),
+            D5 = VALUES(D5), D4 = VALUES(D4), D3 = VALUES(D3), D2 = VALUES(D2), D1 = VALUES(D1),
+            ACTUAL_DELIVERY   = VALUES(ACTUAL_DELIVERY),
+            DEPLOYINFO_CODE   = VALUES(DEPLOYINFO_CODE),
+            BZ                = VALUES(BZ),
+            UPDATED_AT        = CURRENT_TIMESTAMP
+    </insert>
+
+    <!-- 批量 UPSERT -->
+    <insert id="batchUpsert" parameterType="java.util.List">
+        INSERT INTO `cigarette_distribution_prediction_price`
+        (YEAR, MONTH, WEEK_SEQ, CIG_CODE, CIG_NAME, DELIVERY_AREA, DELIVERY_METHOD, DELIVERY_ETYPE, TAG, TAG_FILTER_CONFIG,
+         D30, D29, D28, D27, D26, D25, D24, D23, D22, D21,
+         D20, D19, D18, D17, D16, D15, D14, D13, D12, D11, D10, D9, D8, D7, D6, D5, D4, D3, D2, D1,
+         ACTUAL_DELIVERY, DEPLOYINFO_CODE, BZ)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.year}, #{item.month}, #{item.weekSeq}, #{item.cigCode}, #{item.cigName}, #{item.deliveryArea}, #{item.deliveryMethod}, #{item.deliveryEtype}, #{item.tag}, #{item.tagFilterConfig},
+             #{item.d30}, #{item.d29}, #{item.d28}, #{item.d27}, #{item.d26}, #{item.d25}, #{item.d24}, #{item.d23}, #{item.d22}, #{item.d21},
+             #{item.d20}, #{item.d19}, #{item.d18}, #{item.d17}, #{item.d16}, #{item.d15}, #{item.d14}, #{item.d13}, #{item.d12}, #{item.d11}, #{item.d10}, #{item.d9}, #{item.d8}, #{item.d7}, #{item.d6}, #{item.d5}, #{item.d4}, #{item.d3}, #{item.d2}, #{item.d1},
+             #{item.actualDelivery}, #{item.deployinfoCode}, #{item.bz})
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+            DELIVERY_AREA     = VALUES(DELIVERY_AREA),
+            DELIVERY_METHOD   = VALUES(DELIVERY_METHOD),
+            DELIVERY_ETYPE    = VALUES(DELIVERY_ETYPE),
+            TAG               = VALUES(TAG),
+            TAG_FILTER_CONFIG = VALUES(TAG_FILTER_CONFIG),
+            D30 = VALUES(D30), D29 = VALUES(D29), D28 = VALUES(D28), D27 = VALUES(D27), D26 = VALUES(D26),
+            D25 = VALUES(D25), D24 = VALUES(D24), D23 = VALUES(D23), D22 = VALUES(D22), D21 = VALUES(D21),
+            D20 = VALUES(D20), D19 = VALUES(D19), D18 = VALUES(D18), D17 = VALUES(D17), D16 = VALUES(D16),
+            D15 = VALUES(D15), D14 = VALUES(D14), D13 = VALUES(D13), D12 = VALUES(D12), D11 = VALUES(D11),
+            D10 = VALUES(D10), D9 = VALUES(D9), D8 = VALUES(D8), D7 = VALUES(D7), D6 = VALUES(D6),
+            D5 = VALUES(D5), D4 = VALUES(D4), D3 = VALUES(D3), D2 = VALUES(D2), D1 = VALUES(D1),
+            ACTUAL_DELIVERY   = VALUES(ACTUAL_DELIVERY),
+            DEPLOYINFO_CODE   = VALUES(DEPLOYINFO_CODE),
+            BZ                = VALUES(BZ),
+            UPDATED_AT        = CURRENT_TIMESTAMP
+    </insert>
+
+    <!-- 全字段定点更新 -->
+    <update id="updateOne" parameterType="org.example.entity.CigaretteDistributionPredictionData">
+        UPDATE `cigarette_distribution_prediction_price`
+        SET DELIVERY_AREA     = #{deliveryArea},
+            DELIVERY_METHOD   = #{deliveryMethod},
+            DELIVERY_ETYPE    = #{deliveryEtype},
+            TAG               = #{tag},
+            TAG_FILTER_CONFIG = #{tagFilterConfig},
+            D30 = #{d30}, D29 = #{d29}, D28 = #{d28}, D27 = #{d27}, D26 = #{d26},
+            D25 = #{d25}, D24 = #{d24}, D23 = #{d23}, D22 = #{d22}, D21 = #{d21},
+            D20 = #{d20}, D19 = #{d19}, D18 = #{d18}, D17 = #{d17}, D16 = #{d16},
+            D15 = #{d15}, D14 = #{d14}, D13 = #{d13}, D12 = #{d12}, D11 = #{d11},
+            D10 = #{d10}, D9 = #{d9}, D8 = #{d8}, D7 = #{d7}, D6 = #{d6},
+            D5 = #{d5}, D4 = #{d4}, D3 = #{d3}, D2 = #{d2}, D1 = #{d1},
+            ACTUAL_DELIVERY   = #{actualDelivery},
+            DEPLOYINFO_CODE   = #{deployinfoCode},
+            BZ                = #{bz},
+            UPDATED_AT        = CURRENT_TIMESTAMP
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND CIG_CODE = #{cigCode}
+          AND CIG_NAME = #{cigName}
+          AND DELIVERY_AREA = #{deliveryArea}
+    </update>
+
+    <!-- 仅更新30个档位 -->
+    <update id="updateGrades">
+        UPDATE `cigarette_distribution_prediction_price`
+        SET
+        D30 = #{grades[0]}, D29 = #{grades[1]}, D28 = #{grades[2]}, D27 = #{grades[3]}, D26 = #{grades[4]},
+        D25 = #{grades[5]}, D24 = #{grades[6]}, D23 = #{grades[7]}, D22 = #{grades[8]}, D21 = #{grades[9]},
+        D20 = #{grades[10]}, D19 = #{grades[11]}, D18 = #{grades[12]}, D17 = #{grades[13]}, D16 = #{grades[14]},
+        D15 = #{grades[15]}, D14 = #{grades[16]}, D13 = #{grades[17]}, D12 = #{grades[18]}, D11 = #{grades[19]},
+        D10 = #{grades[20]}, D9 = #{grades[21]}, D8 = #{grades[22]}, D7 = #{grades[23]}, D6 = #{grades[24]},
+        D5 = #{grades[25]}, D4 = #{grades[26]}, D3 = #{grades[27]}, D2 = #{grades[28]}, D1 = #{grades[29]},
+        UPDATED_AT = CURRENT_TIMESTAMP
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND CIG_CODE = #{cigCode}
+          AND CIG_NAME = #{cigName}
+          AND DELIVERY_AREA = #{deliveryArea}
+    </update>
+
+    <!-- 联表 info 表，补充 ADV -->
+    <select id="findAllWithAdv" resultType="map">
+        SELECT p.*, i.ADV
+        FROM `cigarette_distribution_prediction_price` p
+        LEFT JOIN `cigarette_distribution_info` i
+          ON p.YEAR = i.YEAR
+         AND p.MONTH = i.MONTH
+         AND p.WEEK_SEQ = i.WEEK_SEQ
+         AND p.CIG_CODE = i.CIG_CODE
+         AND p.CIG_NAME = i.CIG_NAME
+        WHERE p.YEAR = #{year}
+          AND p.MONTH = #{month}
+          AND p.WEEK_SEQ = #{weekSeq}
+        ORDER BY p.CIG_CODE, p.CIG_NAME, p.DELIVERY_AREA
+    </select>
+
+    <!-- 按卷烟删除指定分区的记录 -->
+    <delete id="deleteByCig">
+        DELETE FROM `cigarette_distribution_prediction_price`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND CIG_CODE = #{cigCode}
+          AND CIG_NAME = #{cigName}
+    </delete>
+
+</mapper>
+

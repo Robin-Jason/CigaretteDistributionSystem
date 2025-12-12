@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  CigaretteDistributionInfoMapper XML
+  作用：承载卷烟投放信息表的 UPSERT 与定点更新 SQL。
+  约定：namespace 对应 org.example.mapper.CigaretteDistributionInfoMapper，方法名与接口保持一致。
+-->
+<mapper namespace="org.example.mapper.CigaretteDistributionInfoMapper">
+
+    <!-- 单条 UPSERT -->
+    <insert id="upsert" parameterType="org.example.entity.CigaretteDistributionInfoData">
+        INSERT INTO `cigarette_distribution_info`
+        (YEAR, MONTH, WEEK_SEQ, CIG_CODE, CIG_NAME, SUPPLY_ATTRIBUTE, URS, DELIVERY_METHOD, DELIVERY_ETYPE, TAG,
+         ADV, DELIVERY_AREA, BZ, TAG_FILTER_CONFIG)
+        VALUES (#{year}, #{month}, #{weekSeq}, #{cigCode}, #{cigName}, #{supplyAttribute}, #{urs},
+                #{deliveryMethod}, #{deliveryEtype}, #{tag}, #{adv}, #{deliveryArea}, #{bz}, #{tagFilterConfig})
+        ON DUPLICATE KEY UPDATE
+            SUPPLY_ATTRIBUTE = VALUES(SUPPLY_ATTRIBUTE),
+            URS              = VALUES(URS),
+            DELIVERY_METHOD  = VALUES(DELIVERY_METHOD),
+            DELIVERY_ETYPE   = VALUES(DELIVERY_ETYPE),
+            TAG              = VALUES(TAG),
+            ADV              = VALUES(ADV),
+            DELIVERY_AREA    = VALUES(DELIVERY_AREA),
+            BZ               = VALUES(BZ),
+            TAG_FILTER_CONFIG= VALUES(TAG_FILTER_CONFIG),
+            UPDATED_AT       = CURRENT_TIMESTAMP
+    </insert>
+
+    <!-- 批量 UPSERT -->
+    <insert id="batchUpsert" parameterType="java.util.List">
+        INSERT INTO `cigarette_distribution_info`
+        (YEAR, MONTH, WEEK_SEQ, CIG_CODE, CIG_NAME, SUPPLY_ATTRIBUTE, URS, DELIVERY_METHOD, DELIVERY_ETYPE, TAG,
+         ADV, DELIVERY_AREA, BZ, TAG_FILTER_CONFIG)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.year}, #{item.month}, #{item.weekSeq}, #{item.cigCode}, #{item.cigName}, #{item.supplyAttribute}, #{item.urs},
+             #{item.deliveryMethod}, #{item.deliveryEtype}, #{item.tag}, #{item.adv}, #{item.deliveryArea}, #{item.bz}, #{item.tagFilterConfig})
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+            SUPPLY_ATTRIBUTE = VALUES(SUPPLY_ATTRIBUTE),
+            URS              = VALUES(URS),
+            DELIVERY_METHOD  = VALUES(DELIVERY_METHOD),
+            DELIVERY_ETYPE   = VALUES(DELIVERY_ETYPE),
+            TAG              = VALUES(TAG),
+            ADV              = VALUES(ADV),
+            DELIVERY_AREA    = VALUES(DELIVERY_AREA),
+            BZ               = VALUES(BZ),
+            TAG_FILTER_CONFIG= VALUES(TAG_FILTER_CONFIG),
+            UPDATED_AT       = CURRENT_TIMESTAMP
+    </insert>
+
+    <!-- 按主键（年月周 + CIG_CODE/CIG_NAME）定点更新 -->
+    <update id="updateOne" parameterType="org.example.entity.CigaretteDistributionInfoData">
+        UPDATE `cigarette_distribution_info`
+        SET SUPPLY_ATTRIBUTE = #{supplyAttribute},
+            URS              = #{urs},
+            DELIVERY_METHOD  = #{deliveryMethod},
+            DELIVERY_ETYPE   = #{deliveryEtype},
+            TAG              = #{tag},
+            ADV              = #{adv},
+            DELIVERY_AREA    = #{deliveryArea},
+            BZ               = #{bz},
+            TAG_FILTER_CONFIG= #{tagFilterConfig},
+            UPDATED_AT       = CURRENT_TIMESTAMP
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND CIG_CODE = #{cigCode}
+          AND CIG_NAME = #{cigName}
+    </update>
+
+    <!-- 查询不重复投放组合 -->
+    <select id="findDistinctCombinations" resultType="java.util.LinkedHashMap">
+        SELECT DISTINCT DELIVERY_METHOD, DELIVERY_ETYPE, TAG
+        FROM `cigarette_distribution_info`
+        WHERE YEAR = #{year} AND MONTH = #{month} AND WEEK_SEQ = #{weekSeq}
+    </select>
+
+</mapper>
+

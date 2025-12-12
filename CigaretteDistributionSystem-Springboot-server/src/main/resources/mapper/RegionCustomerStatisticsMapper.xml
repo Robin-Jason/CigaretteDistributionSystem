@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  RegionCustomerStatisticsMapper XML
+  作用：region_customer_statistics 分区表的查询、批量 UPSERT、删除、计数。
+-->
+<mapper namespace="org.example.mapper.RegionCustomerStatisticsMapper">
+
+    <!-- 查询指定分区全部记录 -->
+    <select id="findAll" resultType="map">
+        SELECT REGION,
+               D30, D29, D28, D27, D26, D25, D24, D23, D22, D21,
+               D20, D19, D18, D17, D16, D15, D14, D13, D12, D11,
+               D10, D9, D8, D7, D6, D5, D4, D3, D2, D1,
+               TOTAL
+        FROM `region_customer_statistics`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+        ORDER BY REGION
+    </select>
+
+    <!-- 按区域查询单条记录 -->
+    <select id="findByRegion" resultType="map">
+        SELECT REGION,
+               D30, D29, D28, D27, D26, D25, D24, D23, D22, D21,
+               D20, D19, D18, D17, D16, D15, D14, D13, D12, D11,
+               D10, D9, D8, D7, D6, D5, D4, D3, D2, D1,
+               TOTAL
+        FROM `region_customer_statistics`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND REGION = #{region}
+        LIMIT 1
+    </select>
+
+    <!-- 批量 UPSERT -->
+    <insert id="batchUpsert" parameterType="java.util.List">
+        INSERT INTO `region_customer_statistics`
+        (YEAR, MONTH, WEEK_SEQ, REGION,
+         D30, D29, D28, D27, D26, D25, D24, D23, D22, D21,
+         D20, D19, D18, D17, D16, D15, D14, D13, D12, D11,
+         D10, D9, D8, D7, D6, D5, D4, D3, D2, D1,
+         TOTAL)
+        VALUES
+        <foreach collection="records" item="item" separator=",">
+            (#{year}, #{month}, #{weekSeq}, #{item.region},
+             #{item.grades[0]}, #{item.grades[1]}, #{item.grades[2]}, #{item.grades[3]}, #{item.grades[4]},
+             #{item.grades[5]}, #{item.grades[6]}, #{item.grades[7]}, #{item.grades[8]}, #{item.grades[9]},
+             #{item.grades[10]}, #{item.grades[11]}, #{item.grades[12]}, #{item.grades[13]}, #{item.grades[14]},
+             #{item.grades[15]}, #{item.grades[16]}, #{item.grades[17]}, #{item.grades[18]}, #{item.grades[19]},
+             #{item.grades[20]}, #{item.grades[21]}, #{item.grades[22]}, #{item.grades[23]}, #{item.grades[24]},
+             #{item.grades[25]}, #{item.grades[26]}, #{item.grades[27]}, #{item.grades[28]}, #{item.grades[29]},
+             #{item.total})
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+            D30 = VALUES(D30), D29 = VALUES(D29), D28 = VALUES(D28), D27 = VALUES(D27), D26 = VALUES(D26),
+            D25 = VALUES(D25), D24 = VALUES(D24), D23 = VALUES(D23), D22 = VALUES(D22), D21 = VALUES(D21),
+            D20 = VALUES(D20), D19 = VALUES(D19), D18 = VALUES(D18), D17 = VALUES(D17), D16 = VALUES(D16),
+            D15 = VALUES(D15), D14 = VALUES(D14), D13 = VALUES(D13), D12 = VALUES(D12), D11 = VALUES(D11),
+            D10 = VALUES(D10), D9 = VALUES(D9), D8 = VALUES(D8), D7 = VALUES(D7), D6 = VALUES(D6),
+            D5 = VALUES(D5), D4 = VALUES(D4), D3 = VALUES(D3), D2 = VALUES(D2), D1 = VALUES(D1),
+            TOTAL = VALUES(TOTAL),
+            UPDATED_AT = CURRENT_TIMESTAMP
+    </insert>
+
+    <!-- 按年月周删除 -->
+    <delete id="deleteByYearMonthWeekSeq">
+        DELETE FROM `region_customer_statistics`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+    </delete>
+
+    <!-- 按区域删除 -->
+    <delete id="deleteByRegion">
+        DELETE FROM `region_customer_statistics`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND REGION = #{region}
+    </delete>
+
+    <!-- 计数 -->
+    <select id="count" resultType="long">
+        SELECT COUNT(*)
+        FROM `region_customer_statistics`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+    </select>
+
+</mapper>
+

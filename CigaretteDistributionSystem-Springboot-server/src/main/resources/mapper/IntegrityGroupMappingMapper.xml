@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.mapper.IntegrityGroupMappingMapper">
+
+    <resultMap id="IntegrityGroupMappingMap" type="org.example.entity.IntegrityGroupMapping">
+        <id column="id" property="id"/>
+        <result column="group_name" property="groupName"/>
+        <result column="group_code" property="groupCode"/>
+        <result column="customer_count" property="customerCount"/>
+        <result column="sort_order" property="sortOrder"/>
+    </resultMap>
+
+    <update id="createTableIfNotExists">
+        CREATE TABLE IF NOT EXISTS `integrity_group_code_mapping` (
+            `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+            `group_name` varchar(100) DEFAULT NULL COMMENT '小组名称',
+            `group_code` varchar(50) DEFAULT NULL COMMENT '小组编码',
+            `customer_count` decimal(20,4) DEFAULT NULL COMMENT '客户数',
+            `sort_order` int DEFAULT NULL COMMENT '排序',
+            PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+    </update>
+
+    <update id="truncateTable">
+        TRUNCATE TABLE `integrity_group_code_mapping`
+    </update>
+
+    <insert id="batchInsert">
+        INSERT INTO `integrity_group_code_mapping`
+        (group_name, group_code, customer_count, sort_order)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.groupName}, #{item.groupCode}, #{item.customerCount}, #{item.sortOrder})
+        </foreach>
+    </insert>
+
+    <select id="selectAllOrderBySort" resultMap="IntegrityGroupMappingMap">
+        SELECT id, group_name, group_code, customer_count, sort_order
+        FROM `integrity_group_code_mapping`
+        ORDER BY sort_order ASC
+    </select>
+</mapper>
+

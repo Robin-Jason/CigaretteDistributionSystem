@@ -1,22 +1,32 @@
 package org.example.controller;
 
 import lombok.extern.slf4j.Slf4j;
-import org.example.entity.CigaretteDistributionPredictionData;
-import org.example.service.DataManagementService;
+import org.example.dto.GenerateDistributionPlanRequestDto;
+import org.example.dto.GenerateDistributionPlanResponseDto;
+import org.example.dto.TotalActualDeliveryResponseDto;
 import org.example.service.DistributionCalculateService;
+import org.example.util.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
  * 分配计算控制器
- * 负责卷烟分配算法计算和分配矩阵写回等功能
+ *
+ * 作用：
+ * - 提供一键生成分配方案的入口，触发算法计算并写回预测表。
+ * - 提供分区级总实际投放量汇总的查询入口，用于对账/看板。
+ *
+ * 特性：
+ * - 仅暴露计算/汇总接口，不承载增删改查的细粒度操作。
+ * - 接口遵循 REST 风格，返回统一的 result map（包含 success/message/code 等）。
+ *
+ * @author Robin
+ * @version 1.0
+ * @since 2025-11-30
  */
 @Slf4j
 @RestController
@@ -27,73 +37,26 @@ public class DistributionCalculateController {
     @Autowired
     private DistributionCalculateService distributionService;
     
-    @Autowired
-    private DataManagementService dataManagementService;
-    
-    /**
-     * 获取算法输出的分配矩阵并写回数据库
-     * 
-     * @param year 年份
-     * @param month 月份
-     * @param weekSeq 周序号
-     * @param urbanRatio 城网比例（可选，仅用于档位+市场类型）
-     * @param ruralRatio 农网比例（可选，仅用于档位+市场类型）
-     */
-    @PostMapping("/write-back")
-    public ResponseEntity<Map<String, Object>> getAndwriteBackAllocationMatrix(
-            @RequestParam Integer year, 
-            @RequestParam Integer month, 
-            @RequestParam Integer weekSeq,
-            @RequestParam(required = false) BigDecimal urbanRatio,
-            @RequestParam(required = false) BigDecimal ruralRatio) {
-        
-        log.info("接收写回请求，年份: {}, 月份: {}, 周序号: {}", year, month, weekSeq);
-        if (urbanRatio != null && ruralRatio != null) {
-            log.info("接收市场类型比例参数 - 城网: {}, 农网: {}", urbanRatio, ruralRatio);
-        }
-        
-        try {
-            // 构建市场类型比例参数
-            Map<String, BigDecimal> marketRatios = null;
-            if (urbanRatio != null && ruralRatio != null) {
-                marketRatios = new HashMap<>();
-                marketRatios.put("urbanRatio", urbanRatio);
-                marketRatios.put("ruralRatio", ruralRatio);
-            }
-            
-            Map<String, Object> result = distributionService.getAndwriteBackAllocationMatrix(
-                year, month, weekSeq, marketRatios);
-            
-            if ((Boolean) result.get("success")) {
-                log.info("分配矩阵写回成功，成功: {}/{}", result.get("successCount"), result.get("totalCount"));
-                return ResponseEntity.ok(result);
-            } else {
-                log.error("分配矩阵写回失败: {}", result.get("message"));
-                return ResponseEntity.internalServerError().body(result);
-            }
-            
-        } catch (Exception e) {
-            log.error("分配矩阵写回失败", e);
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "分配矩阵写回失败: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(response);
-        }
-    }
-    
     /**
      * 一键生成分配方案
-     * 前端调用接口：generate-distribution-plan
-     * 功能：删除指定日期的所有分配数据，重新执行各投放类型的算法分配并写回数据库
-     * 
-     * @param year 年份
-     * @param month 月份
-     * @param weekSeq 周序号
-     * @param urbanRatio 城网比例（可选，仅用于档位+市场类型）
-     * @param ruralRatio 农网比例（可选，仅用于档位+市场类型）
+     *
+     * 功能：全量重建指定分区（year/month/weekSeq）的卷烟分配记录，并写回预测表。
+     * 适用：运营一键重跑、定时任务补数、全量回灌。
+     *
+     * 注意：
+     * - 仅做“全量重建”，不提供增删改查的局部操作。
+     * - 市场类型比例仅在“档位+市场类型”扩展投放时生效，其他组合忽略该参数。
+     *
+     * @param year        年份（必填）
+     * @param month       月份（必填）
+     * @param weekSeq     周序号（必填）
+     * @param urbanRatio  城网比例（可选，仅档位+市场类型生效）
+     * @param ruralRatio  农网比例（可选，仅档位+市场类型生效）
+     * @return 成功时返回 success=true 的结果映射；失败返回 500 且包含错误码
+     *
+     * @example POST /api/calculate/generate-distribution-plan?year=2025&month=9&weekSeq=3
      */
     @PostMapping("/generate-distribution-plan")
-    @Transactional
     public ResponseEntity<Map<String, Object>> generateDistributionPlan(
             @RequestParam Integer year,
             @RequestParam Integer month,
@@ -107,121 +70,41 @@ public class DistributionCalculateController {
         }
         
         try {
-            // 1. 检查指定日期是否存在分配数据（通过DataManagementService）
-            List<CigaretteDistributionPredictionData> existingData = dataManagementService.queryTestDataByTime(year, month, weekSeq);
+            // 构建请求DTO
+            GenerateDistributionPlanRequestDto request = new GenerateDistributionPlanRequestDto();
+            request.setYear(year);
+            request.setMonth(month);
+            request.setWeekSeq(weekSeq);
+            request.setUrbanRatio(urbanRatio);
+            request.setRuralRatio(ruralRatio);
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("year", year);
-            response.put("month", month);
-            response.put("weekSeq", weekSeq);
-            response.put("startTime", System.currentTimeMillis());
+            // 调用Service层，所有业务逻辑都在Service层
+            GenerateDistributionPlanResponseDto result = distributionService.generateDistributionPlan(request);
             
-            if (!existingData.isEmpty()) {
-                log.info("发现指定日期已存在{}条分配数据，将先删除后重新分配", existingData.size());
-                
-                // 2. 删除现有分配数据（通过DataManagementService）
-                Map<String, Object> deleteResult = dataManagementService.deleteDistributionDataByTime(year, month, weekSeq);
-                
-                if ((Boolean) deleteResult.get("success")) {
-                    log.info("成功删除{}年{}月第{}周的{}条现有分配数据", year, month, weekSeq, deleteResult.get("deletedCount"));
-                    
-                    response.put("deletedExistingData", true);
-                    response.put("deletedRecords", deleteResult.get("deletedCount"));
-                    
-                } else {
-                    log.error("删除现有分配数据失败: {}", deleteResult.get("message"));
-                    response.put("success", false);
-                    response.put("message", "删除现有分配数据失败: " + deleteResult.get("message"));
-                    response.put("error", "DELETE_FAILED");
-                    return ResponseEntity.internalServerError().body(response);
-                }
+            // 根据Service返回的结果构建HTTP响应
+            if (result.isSuccess()) {
+                return ResponseEntity.ok(result.toMap());
             } else {
-                log.info("指定日期暂无分配数据，将直接进行新分配");
-                response.put("deletedExistingData", false);
-                response.put("deletedRecords", 0);
-            }
-            
-            // 3. 执行算法分配并写回数据库
-            log.info("开始执行各投放类型的算法分配...");
-            
-            // 构建市场类型比例参数
-            Map<String, BigDecimal> marketRatios = null;
-            if (urbanRatio != null && ruralRatio != null) {
-                marketRatios = new HashMap<>();
-                marketRatios.put("urbanRatio", urbanRatio);
-                marketRatios.put("ruralRatio", ruralRatio);
-            }
-            
-            Map<String, Object> allocationResult = distributionService.getAndwriteBackAllocationMatrix(
-                year, month, weekSeq, marketRatios);
-            
-            if ((Boolean) allocationResult.get("success")) {
-                // 4. 分配成功，查询生成的分配记录数（通过DataManagementService）
-                List<CigaretteDistributionPredictionData> generatedData = dataManagementService.queryTestDataByTime(year, month, weekSeq);
-                int processedCount = generatedData.size();
-                
-                // 5. 合并结果
-                response.put("success", true);
-                response.put("message", "一键分配方案生成成功");
-                response.put("operation", "一键生成分配方案");
-                response.put("endTime", System.currentTimeMillis());
-                response.put("processingTime", (Long) response.get("endTime") - (Long) response.get("startTime") + "ms");
-                
-                // 合并分配结果信息
-                response.put("allocationResult", allocationResult);
-                response.put("totalCigarettes", allocationResult.get("totalCount"));
-                response.put("successfulAllocations", allocationResult.get("successCount"));
-                response.put("processedCount", processedCount);  // 新增：生成的分配记录数
-                response.put("allocationDetails", allocationResult.get("results"));
-                
-                log.info("一键分配方案生成完成，成功分配: {}/{} 种卷烟，生成 {} 条分配记录", 
-                        allocationResult.get("successCount"), allocationResult.get("totalCount"), processedCount);
-                        
-                return ResponseEntity.ok(response);
-                
-            } else {
-                // 5. 分配失败，但仍需统计可能已生成的记录数（通过DataManagementService）
-                List<CigaretteDistributionPredictionData> partialData = dataManagementService.queryTestDataByTime(year, month, weekSeq);
-                int processedCount = partialData.size();
-                
-                response.put("success", false);
-                response.put("message", "算法分配失败: " + allocationResult.get("message"));
-                response.put("error", "ALLOCATION_FAILED");
-                response.put("processedCount", processedCount);  // 已生成的分配记录数（可能部分成功）
-                response.put("allocationResult", allocationResult);
-                
-                log.error("一键分配方案生成失败: {}，已生成 {} 条分配记录", allocationResult.get("message"), processedCount);
-                return ResponseEntity.internalServerError().body(response);
+                return ResponseEntity.internalServerError().body(result.toMap());
             }
             
         } catch (Exception e) {
             log.error("一键生成分配方案失败", e);
-            
-            // 即使发生异常，也尝试统计已生成的记录数（通过DataManagementService）
-            int processedCount = 0;
-            try {
-                List<CigaretteDistributionPredictionData> existingRecords = dataManagementService.queryTestDataByTime(year, month, weekSeq);
-                processedCount = existingRecords.size();
-            } catch (Exception countException) {
-                log.warn("统计已生成记录数时发生异常: {}", countException.getMessage());
-            }
-            
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("message", "一键生成分配方案失败: " + e.getMessage());
-            errorResponse.put("error", "GENERATION_FAILED");
-            errorResponse.put("year", year);
-            errorResponse.put("month", month);
-            errorResponse.put("weekSeq", weekSeq);
-            errorResponse.put("processedCount", processedCount);  // 异常情况下的记录数
-            errorResponse.put("exception", e.getClass().getSimpleName());
-            
-            return ResponseEntity.internalServerError().body(errorResponse);
+            return ApiResponses.internalError("一键生成分配方案失败: " + e.getMessage(), "GENERATION_FAILED");
         }
     }
 
     /**
-     * 计算指定时间范围内所有卷烟的总实际投放量
+     * 计算指定分区（year/month/weekSeq）内所有卷烟的总实际投放量。
+     *
+     * 用途：对账/看板汇总，验证分配写回结果。
+     *
+     * @param year    年份（必填）
+     * @param month   月份（必填）
+     * @param weekSeq 周序号（必填）
+     * @return 汇总结果映射，包含 success 标识与总量；失败仍返回 200 但 success=false
+     *
+     * @example POST /api/calculate/total-actual-delivery?year=2025&month=9&weekSeq=3
      */
     @PostMapping("/total-actual-delivery")
     public ResponseEntity<Map<String, Object>> calculateTotalActualDelivery(@RequestParam Integer year,
@@ -230,39 +113,19 @@ public class DistributionCalculateController {
         log.info("接收总实际投放量计算请求，年份: {}, 月份: {}, 周序号: {}", year, month, weekSeq);
         
         try {
-            // 获取指定时间的数据（通过DataManagementService）
-            List<CigaretteDistributionPredictionData> rawDataList = dataManagementService.queryTestDataByTime(year, month, weekSeq);
+            // 调用Service层，所有业务逻辑都在Service层
+            TotalActualDeliveryResponseDto result = distributionService.calculateTotalActualDelivery(year, month, weekSeq);
             
-            if (rawDataList.isEmpty()) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("success", false);
-                response.put("message", "未找到指定时间的数据");
-                response.put("data", new HashMap<>());
-                return ResponseEntity.ok(response);
+            // 根据Service返回的结果构建HTTP响应
+            if (result.isSuccess()) {
+                return ResponseEntity.ok(result.toMap());
+            } else {
+                return ResponseEntity.ok(result.toMap()); // 即使失败也返回200，但success=false
             }
-            
-            // 计算总实际投放量（通过DistributionCalculateService）
-            Map<String, BigDecimal> totalActualDeliveryMap = distributionService.calculateTotalActualDeliveryByTobacco(rawDataList);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "总实际投放量计算成功");
-            response.put("data", totalActualDeliveryMap);
-            response.put("year", year);
-            response.put("month", month);
-            response.put("weekSeq", weekSeq);
-            response.put("totalRecords", rawDataList.size());
-            response.put("cigaretteCount", totalActualDeliveryMap.size());
-            
-            log.info("总实际投放量计算成功，返回{}种卷烟的数据", totalActualDeliveryMap.size());
-            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             log.error("总实际投放量计算失败", e);
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "总实际投放量计算失败: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(response);
+            return ApiResponses.internalError("总实际投放量计算失败: " + e.getMessage(), "INTERNAL_ERROR");
         }
     }
 }

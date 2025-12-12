@@ -1,11 +1,15 @@
 package org.example.util;
 
 import org.springframework.stereotype.Component;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Component
 public class KmpMatcher {
+
+    private static final Pattern NORMALIZE_PATTERN = Pattern.compile("[\\s()（）\\+]+");
     
     /**
      * 使用KMP算法匹配字符串
@@ -15,18 +19,50 @@ public class KmpMatcher {
      */
     public List<String> matchPatterns(String text, List<String> patterns) {
         List<String> matchedPatterns = new ArrayList<>();
-        
+
         if (text == null || patterns == null || patterns.isEmpty()) {
             return matchedPatterns;
         }
-        
-        for (String pattern : patterns) {
-            if (pattern != null && kmpSearch(text, pattern)) {
-                matchedPatterns.add(pattern);
+
+        String normalizedText = normalize(text);
+        if (normalizedText.isEmpty()) {
+            return matchedPatterns;
+        }
+
+        for (String candidate : patterns) {
+            if (candidate == null) {
+                continue;
+            }
+            String normalizedCandidate = normalize(candidate);
+            if (normalizedCandidate.isEmpty()) {
+                continue;
+            }
+            // 仅当字符串去除括号、加号、空白后完全相同时才认为匹配
+            if (normalizedCandidate.equals(normalizedText)) {
+                matchedPatterns.add(candidate);
+                continue;
+            }
+            if (normalizedCandidate.length() == normalizedText.length() &&
+                kmpSearch(normalizedText, normalizedCandidate)) {
+                matchedPatterns.add(candidate);
             }
         }
-        
+
         return matchedPatterns;
+    }
+    
+    /**
+     * 规范化字符串，移除括号、加号和空白字符
+     */
+    private String normalize(String input) {
+        if (input == null) {
+            return "";
+        }
+        String trimmed = input.trim();
+        if (trimmed.isEmpty()) {
+            return "";
+        }
+        return NORMALIZE_PATTERN.matcher(trimmed).replaceAll("");
     }
     
     /**
@@ -37,6 +73,9 @@ public class KmpMatcher {
      */
     private boolean kmpSearch(String text, String pattern) {
         if (text == null || pattern == null || pattern.isEmpty()) {
+            return false;
+        }
+        if (text.length() != pattern.length()) {
             return false;
         }
         

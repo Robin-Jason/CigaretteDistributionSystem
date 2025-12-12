@@ -65,17 +65,18 @@
 <script>
 import { Grid } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import DataTable from '../components/DataTable.vue'
-import SearchForm from '../components/SearchForm.vue'
-import ImportTable from '../components/ImportTable.vue'
+// 使用重构后的新组件
+import DataTableMain from '../components/datatable/DataTableMain.vue'
+import SearchFormMain from '../components/search/SearchFormMain.vue'
+import ImportTableMain from '../components/import/ImportTableMain.vue'
 
 export default {
   name: 'Home',
   components: {
     Grid,
-    DataTable,
-    SearchForm,
-    ImportTable
+    DataTable: DataTableMain,
+    SearchForm: SearchFormMain,
+    ImportTable: ImportTableMain
   },
   data() {
     return {

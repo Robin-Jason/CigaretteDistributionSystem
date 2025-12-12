@@ -1,0 +1,191 @@
+distribution:
+  encoding:
+    delivery-methods:
+      - code: "A"
+        labels:
+          - "按档位统一投放"
+          - "按档位投放"
+      - code: "B"
+        labels:
+          - "按档位扩展投放"
+          - "按档位拓展投放"
+      - code: "C"
+        labels:
+          - "按价位段自选投放"
+      - code: "D"
+        labels:
+          - "选点投放"
+      - code: "E"
+        labels:
+          - "按需投放"
+    extension-types:
+      - code: "1"
+        labels:
+          - "档位+区县"
+      - code: "2"
+        labels:
+          - "档位+市场类型"
+      - code: "3"
+        labels:
+          - "档位+城乡分类代码"
+      - code: "4"
+        labels:
+          - "档位+业态"
+          - "档位+业态类型"
+          - "档位+经营业态"
+      - code: "5"
+        labels:
+          - "档位+市场部"
+      - code: "6"
+        labels:
+          - "档位+商圈类型"
+      - code: "7"
+        labels:
+          - "档位+信用等级"
+      - code: "8"
+        labels:
+          - "档位+诚信自律小组"
+    region-types:
+      - type: COUNTY
+        entries:
+          - code: "Q1"
+            labels: ["城区烟草专卖局(营销部)", "城区烟草专卖局", "城区"]
+          - code: "Q2"
+            labels: ["丹江口市烟草专卖局(营销部)", "丹江口市烟草专卖局", "丹江口市", "丹江"]
+          - code: "Q3"
+            labels: ["房县烟草专卖局(营销部)", "房县烟草专卖局", "房县"]
+          - code: "Q4"
+            labels: ["郧阳区烟草专卖局(营销部)", "郧阳区烟草专卖局", "郧阳区", "郧阳"]
+          - code: "Q5"
+            labels: ["竹山县烟草专卖局(营销部)", "竹山县烟草专卖局", "竹山县", "竹山"]
+          - code: "Q6"
+            labels: ["郧西县烟草专卖局(营销部)", "郧西县烟草专卖局", "郧西县", "郧西"]
+          - code: "Q7"
+            labels: ["竹溪县烟草专卖局(营销部)", "竹溪县烟草专卖局", "竹溪县", "竹溪"]
+      - type: MARKET_TYPE
+        entries:
+          - code: "M1"
+            labels: ["城网"]
+          - code: "M2"
+            labels: ["农网"]
+      - type: URBAN_RURAL_CODE
+        entries:
+          - code: "F1"
+            labels: ["主城区"]
+          - code: "F2"
+            labels: ["村庄"]
+          - code: "F3"
+            labels: ["镇中心区"]
+          - code: "F4"
+            labels: ["镇乡结合区", "镇乡接合区"]
+          - code: "F5"
+            labels: ["乡中心区"]
+          - code: "F6"
+            labels: ["特殊区域"]
+          - code: "F7"
+            labels: ["城乡结合区"]
+      - type: BUSINESS_FORMAT
+        entries:
+          - code: "Y1"
+            labels: ["便利店"]
+          - code: "Y2"
+            labels: ["其他"]
+          - code: "Y3"
+            labels: ["烟草专业店"]
+          - code: "Y4"
+            labels: ["娱乐服务类"]
+          - code: "Y5"
+            labels: ["超市"]
+          - code: "Y6"
+            labels: ["商场"]
+      - type: BUSINESS_DISTRICT
+        entries:
+          - code: "S1"
+            labels: ["居民区"]
+          - code: "S2"
+            labels: ["集贸区"]
+          - code: "S3"
+            labels: ["工业区"]
+          - code: "S4"
+            labels: ["商业娱乐区"]
+          - code: "S5"
+            labels: ["办公区"]
+          - code: "S6"
+            labels: ["旅游景区"]
+          - code: "S7"
+            labels: ["交通枢纽区"]
+          - code: "S8"
+            labels: ["院校学区"]
+          - code: "S9"
+            labels: ["其他"]
+      - type: MARKET_DEPARTMENT
+        entries:
+          - code: "B1"
+            labels: ["茅箭市场部"]
+          - code: "B2"
+            labels: ["白浪市场部"]
+          - code: "B3"
+            labels: ["张湾市场部"]
+          - code: "B4"
+            labels: ["丹江口城区市场部"]
+          - code: "B5"
+            labels: ["房县城关市场部"]
+          - code: "B6"
+            labels: ["城关市场部"]
+          - code: "B7"
+            labels: ["竹山城关市场部"]
+          - code: "B8"
+            labels: ["武当山市场部"]
+          - code: "B9"
+            labels: ["郧阳城关市场部"]
+          - code: "B10"
+            labels: ["宝丰市场部"]
+          - code: "B11"
+            labels: ["竹溪城关市场部"]
+          - code: "B12"
+            labels: ["羊尾市场部"]
+          - code: "B13"
+            labels: ["柳陂市场部"]
+          - code: "B14"
+            labels: ["南化市场部"]
+          - code: "B15"
+            labels: ["店子市场部"]
+          - code: "B16"
+            labels: ["竹坪市场部"]
+          - code: "B17"
+            labels: ["浪河市场部"]
+          - code: "B18"
+            labels: ["蒋家堰市场部"]
+          - code: "B19"
+            labels: ["化龙市场部"]
+          - code: "B20"
+            labels: ["水坪市场部"]
+          - code: "B21"
+            labels: ["习家店市场部"]
+          - code: "B22"
+            labels: ["泉溪市场部"]
+          - code: "B23"
+            labels: ["大木市场部"]
+          - code: "B24"
+            labels: ["青峰市场部"]
+          - code: "B25"
+            labels: ["官渡市场部"]
+          - code: "B26"
+            labels: ["门古市场部"]
+          - code: "B27"
+            labels: ["鲍峡市场部"]
+      - type: CREDIT_LEVEL
+        entries:
+          - code: "X1"
+            labels: ["AA"]
+          - code: "X2"
+            labels: ["C"]
+          - code: "X3"
+            labels: ["D"]
+          - code: "X4"
+            labels: ["A"]
+          - code: "X5"
+            labels: ["AAA"]
+          - code: "X6"
+            labels: ["B"]
+
