@@ -9,6 +9,7 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 
 /**
@@ -24,8 +25,8 @@ class ExcelImportServiceIntegrationTest {
 
     @Test
     void importFullData_withBaseAndCigaretteFiles_shouldSucceed() throws Exception {
-        Path basePath = Path.of("excel/base_customer_info.xlsx");
-        Path cigPath = Path.of("excel/cigarette_distribution_info.xlsx");
+        Path basePath = Paths.get("excel/base_customer_info.xlsx");
+        Path cigPath = Paths.get("excel/cigarette_distribution_info.xlsx");
 
         MockMultipartFile baseFile = new MockMultipartFile(
                 "baseCustomerInfoFile",
@@ -55,7 +56,7 @@ class ExcelImportServiceIntegrationTest {
 
     @Test
     void importOnlyCigaretteFile_shouldSucceed() throws Exception {
-        Path cigPath = Path.of("excel/cigarette_distribution_info.xlsx");
+        Path cigPath = Paths.get("excel/cigarette_distribution_info.xlsx");
 
         MockMultipartFile cigFile = new MockMultipartFile(
                 "cigaretteDistributionInfoFile",

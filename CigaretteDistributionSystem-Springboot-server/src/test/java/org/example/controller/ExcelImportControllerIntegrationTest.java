@@ -10,6 +10,7 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 
 /**
@@ -26,7 +27,7 @@ public class ExcelImportControllerIntegrationTest {
     private ExcelImportService excelImportService;
 
     private MockMultipartFile loadFile(String name) throws Exception {
-        Path path = Path.of("excel", name);
+        Path path = Paths.get("excel", name);
         byte[] bytes = Files.readAllBytes(path);
         return new MockMultipartFile("file", name, "application/vnd.ms-excel", bytes);
     }

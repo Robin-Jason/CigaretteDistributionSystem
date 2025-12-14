@@ -1,9 +1,12 @@
 package org.example.api.web.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.api.web.converter.ExcelImportConverter;
+import org.example.api.web.vo.request.DataImportRequestVo;
+import org.example.api.web.vo.response.ApiResponseVo;
+import org.example.api.web.vo.response.DataImportResponseVo;
 import org.example.application.dto.DataImportRequestDto;
 import org.example.application.service.ExcelImportService;
-import org.example.shared.util.ApiResponses;
 import org.example.shared.util.UploadValidators;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +39,9 @@ public class ExcelImportController {
     
     @Autowired
     private ExcelImportService excelImportService;
+    
+    @Autowired
+    private ExcelImportConverter converter;
 
     /**
      * 统一数据导入接口（客户表可选，卷烟表必传）。
@@ -55,13 +61,14 @@ public class ExcelImportController {
      * - cigaretteDistributionInfoResult：卷烟表导入结果
      */
     @PostMapping("/data")
-    public ResponseEntity<Map<String, Object>> importData(@Valid DataImportRequestDto request) {
+    public ResponseEntity<ApiResponseVo<DataImportResponseVo>> importData(@Valid DataImportRequestVo requestVo) {
         log.info("接收统一数据导入请求，年份: {}, 月份: {}, 周序号: {}",
-                request.getYear(), request.getMonth(), request.getWeekSeq());
+                requestVo.getYear(), requestVo.getMonth(), requestVo.getWeekSeq());
 
         try {
+            // 文件校验
             ResponseEntity<Map<String, Object>> cigValidation = UploadValidators.validateRequiredFile(
-                    request.getCigaretteDistributionInfoFile(),
+                    requestVo.getCigaretteDistributionInfoFile(),
                     "请选择卷烟投放基础信息表Excel文件",
                     "CIGARETTE_DISTRIBUTION_FILE_EMPTY",
                     10 * 1024 * 1024L,
@@ -69,31 +76,56 @@ public class ExcelImportController {
                     "CIGARETTE_DISTRIBUTION_FILE_TOO_LARGE"
             );
             if (cigValidation != null) {
-                return cigValidation;
+                // 校验失败，转换为统一响应格式
+                Map<String, Object> errorBody = cigValidation.getBody();
+                if (errorBody != null) {
+                    DataImportResponseVo errorVo = new DataImportResponseVo();
+                    errorVo.setSuccess(false);
+                    errorVo.setMessage((String) errorBody.get("message"));
+                    return ResponseEntity.badRequest().body(ApiResponseVo.error(
+                        (String) errorBody.get("message"),
+                        (String) errorBody.get("errorCode")
+                    ));
+                }
+                return ResponseEntity.badRequest().body(ApiResponseVo.error(
+                    "文件校验失败", 
+                    "VALIDATION_FAILED"
+                ));
             }
 
-            boolean hasBaseFile = request.getBaseCustomerInfoFile() != null && !request.getBaseCustomerInfoFile().isEmpty();
-            Map<String, Object> importResult;
+            // VO 转 DTO
+            DataImportRequestDto requestDto = converter.toDto(requestVo);
 
-            // 3. 执行导入
-            importResult = excelImportService.importData(request);
+            boolean hasBaseFile = requestVo.getBaseCustomerInfoFile() != null && !requestVo.getBaseCustomerInfoFile().isEmpty();
+            
+            // 执行导入
+            Map<String, Object> importResult = excelImportService.importData(requestDto);
 
             if (!hasBaseFile) {
                 importResult.put("baseCustomerInfoNotice", "未提供客户基础信息表，本次未更新");
             }
 
+            // Map 转 VO
+            DataImportResponseVo responseVo = converter.toVo(importResult);
+
             if ((Boolean) importResult.get("success")) {
                 log.info("统一数据导入成功，年份: {}, 月份: {}, 周序号: {}",
-                        request.getYear(), request.getMonth(), request.getWeekSeq());
-                return ResponseEntity.ok(importResult);
+                        requestVo.getYear(), requestVo.getMonth(), requestVo.getWeekSeq());
+                return ResponseEntity.ok(ApiResponseVo.success(responseVo, responseVo.getMessage()));
             } else {
                 log.warn("统一数据导入失败: {}", importResult.get("message"));
-                return ResponseEntity.badRequest().body(importResult);
+                return ResponseEntity.badRequest().body(ApiResponseVo.error(
+                    responseVo.getMessage() != null ? responseVo.getMessage() : "数据导入失败",
+                    "IMPORT_FAILED"
+                ));
             }
 
         } catch (Exception e) {
             log.error("统一数据导入失败", e);
-            return ApiResponses.internalError("导入失败: " + e.getMessage(), "IMPORT_FAILED");
+            return ResponseEntity.ok(ApiResponseVo.error(
+                "导入失败: " + e.getMessage(), 
+                "IMPORT_FAILED"
+            ));
         }
     }
 }

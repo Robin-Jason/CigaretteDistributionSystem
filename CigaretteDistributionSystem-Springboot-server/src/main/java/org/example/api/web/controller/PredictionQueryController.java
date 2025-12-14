@@ -1,15 +1,13 @@
 package org.example.api.web.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.api.web.converter.PredictionQueryConverter;
+import org.example.api.web.vo.response.ApiResponseVo;
+import org.example.api.web.vo.response.PredictionQueryResponseVo;
 import org.example.application.service.query.PredictionQueryService;
-import org.example.shared.util.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
@@ -35,6 +33,9 @@ public class PredictionQueryController {
 
     @Autowired
     private PredictionQueryService predictionQueryService;
+    
+    @Autowired
+    private PredictionQueryConverter converter;
 
     /**
      * 按时间分区查询预测数据。
@@ -44,21 +45,31 @@ public class PredictionQueryController {
      * @param year    年份
      * @param month   月份
      * @param weekSeq 周序号
-     * @return 预测数据列表
+     * @return 统一格式的API响应
      *
      * @example GET /api/prediction/list-by-time?year=2025&month=9&weekSeq=3
      */
     @GetMapping("/list-by-time")
-    public ResponseEntity<?> listByTime(@RequestParam Integer year,
+    public ResponseEntity<ApiResponseVo<PredictionQueryResponseVo>> listByTime(
+            @RequestParam Integer year,
                                         @RequestParam Integer month,
                                         @RequestParam Integer weekSeq) {
         try {
             log.info("查询预测分区数据，year={}, month={}, weekSeq={}", year, month, weekSeq);
-            List<Map<String, Object>> data = predictionQueryService.listByTime(year, month, weekSeq);
-            return ResponseEntity.ok(data);
+            
+            // 调用Service层
+            List<Map<String, Object>> dataList = predictionQueryService.listByTime(year, month, weekSeq);
+            
+            // 转换为VO
+            PredictionQueryResponseVo responseVo = converter.toVo(dataList);
+            
+            return ResponseEntity.ok(ApiResponseVo.success(responseVo, "查询成功"));
         } catch (Exception e) {
             log.error("查询预测分区数据失败", e);
-            return ApiResponses.internalError("查询预测分区数据失败: " + e.getMessage(), "INTERNAL_ERROR");
+            return ResponseEntity.ok(ApiResponseVo.error(
+                "查询预测分区数据失败: " + e.getMessage(), 
+                "INTERNAL_ERROR"
+            ));
         }
     }
 
@@ -68,21 +79,31 @@ public class PredictionQueryController {
      * @param year    年份
      * @param month   月份
      * @param weekSeq 周序号
-     * @return 价位段预测数据列表
+     * @return 统一格式的API响应
      *
      * @example GET /api/prediction/list-price-by-time?year=2025&month=9&weekSeq=3
      */
     @GetMapping("/list-price-by-time")
-    public ResponseEntity<?> listPriceByTime(@RequestParam Integer year,
+    public ResponseEntity<ApiResponseVo<PredictionQueryResponseVo>> listPriceByTime(
+            @RequestParam Integer year,
                                              @RequestParam Integer month,
                                              @RequestParam Integer weekSeq) {
         try {
             log.info("查询价位段预测分区数据，year={}, month={}, weekSeq={}", year, month, weekSeq);
-            List<Map<String, Object>> data = predictionQueryService.listPriceByTime(year, month, weekSeq);
-            return ResponseEntity.ok(data);
+            
+            // 调用Service层
+            List<Map<String, Object>> dataList = predictionQueryService.listPriceByTime(year, month, weekSeq);
+            
+            // 转换为VO
+            PredictionQueryResponseVo responseVo = converter.toVo(dataList);
+            
+            return ResponseEntity.ok(ApiResponseVo.success(responseVo, "查询成功"));
         } catch (Exception e) {
             log.error("查询价位段预测分区数据失败", e);
-            return ApiResponses.internalError("查询价位段预测分区数据失败: " + e.getMessage(), "INTERNAL_ERROR");
+            return ResponseEntity.ok(ApiResponseVo.error(
+                "查询价位段预测分区数据失败: " + e.getMessage(), 
+                "INTERNAL_ERROR"
+            ));
         }
     }
 }

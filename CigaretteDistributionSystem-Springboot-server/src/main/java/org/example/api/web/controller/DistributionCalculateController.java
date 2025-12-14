@@ -1,17 +1,20 @@
 package org.example.api.web.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.api.web.converter.DistributionCalculateConverter;
+import org.example.api.web.vo.request.GenerateDistributionPlanRequestVo;
+import org.example.api.web.vo.response.ApiResponseVo;
+import org.example.api.web.vo.response.GenerateDistributionPlanResponseVo;
+import org.example.api.web.vo.response.TotalActualDeliveryResponseVo;
 import org.example.application.dto.GenerateDistributionPlanRequestDto;
 import org.example.application.dto.GenerateDistributionPlanResponseDto;
 import org.example.application.dto.TotalActualDeliveryResponseDto;
 import org.example.application.service.DistributionCalculateService;
-import org.example.shared.util.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-import java.util.Map;
+import javax.validation.Valid;
 
 /**
  * 分配计算控制器
@@ -37,6 +40,9 @@ public class DistributionCalculateController {
     @Autowired
     private DistributionCalculateService distributionService;
     
+    @Autowired
+    private DistributionCalculateConverter converter;
+    
     /**
      * 一键生成分配方案
      *
@@ -47,50 +53,55 @@ public class DistributionCalculateController {
      * - 仅做"全量重建"，不提供增删改查的局部操作。
      * - 市场类型比例仅在"档位+市场类型"扩展投放时生效，其他组合忽略该参数。
      *
-     * @param year        年份（必填）
-     * @param month       月份（必填）
-     * @param weekSeq     周序号（必填）
-     * @param urbanRatio  城网比例（可选，仅档位+市场类型生效）
-     * @param ruralRatio  农网比例（可选，仅档位+市场类型生效）
-     * @return 成功时返回 success=true 的结果映射；失败返回 500 且包含错误码
+     * @param requestVo 生成分配计划请求VO
+     * @return 统一格式的API响应
      *
-     * @example POST /api/calculate/generate-distribution-plan?year=2025&month=9&weekSeq=3
+     * @example POST /api/calculate/generate-distribution-plan
+     * {
+     *   "year": 2025,
+     *   "month": 9,
+     *   "weekSeq": 3,
+     *   "urbanRatio": 0.6,
+     *   "ruralRatio": 0.4
+     * }
      */
     @PostMapping("/generate-distribution-plan")
-    public ResponseEntity<Map<String, Object>> generateDistributionPlan(
-            @RequestParam Integer year,
-            @RequestParam Integer month,
-            @RequestParam Integer weekSeq,
-            @RequestParam(required = false) BigDecimal urbanRatio,
-            @RequestParam(required = false) BigDecimal ruralRatio) {
+    public ResponseEntity<ApiResponseVo<GenerateDistributionPlanResponseVo>> generateDistributionPlan(
+            @Valid @RequestBody GenerateDistributionPlanRequestVo requestVo) {
         
-        log.info("接收一键生成分配方案请求，年份: {}, 月份: {}, 周序号: {}", year, month, weekSeq);
-        if (urbanRatio != null && ruralRatio != null) {
-            log.info("接收市场类型比例参数 - 城网: {}, 农网: {}", urbanRatio, ruralRatio);
+        log.info("接收一键生成分配方案请求，年份: {}, 月份: {}, 周序号: {}", 
+                requestVo.getYear(), requestVo.getMonth(), requestVo.getWeekSeq());
+        if (requestVo.getUrbanRatio() != null && requestVo.getRuralRatio() != null) {
+            log.info("接收市场类型比例参数 - 城网: {}, 农网: {}", 
+                    requestVo.getUrbanRatio(), requestVo.getRuralRatio());
         }
         
         try {
-            // 构建请求DTO
-            GenerateDistributionPlanRequestDto request = new GenerateDistributionPlanRequestDto();
-            request.setYear(year);
-            request.setMonth(month);
-            request.setWeekSeq(weekSeq);
-            request.setUrbanRatio(urbanRatio);
-            request.setRuralRatio(ruralRatio);
+            // VO 转 DTO
+            GenerateDistributionPlanRequestDto requestDto = converter.toDto(requestVo);
             
-            // 调用Service层，所有业务逻辑都在Service层
-            GenerateDistributionPlanResponseDto result = distributionService.generateDistributionPlan(request);
+            // 调用Service层
+            GenerateDistributionPlanResponseDto responseDto = distributionService.generateDistributionPlan(requestDto);
             
-            // 根据Service返回的结果构建HTTP响应
-            if (result.isSuccess()) {
-                return ResponseEntity.ok(result.toMap());
+            // DTO 转 VO
+            GenerateDistributionPlanResponseVo responseVo = converter.toVo(responseDto);
+            
+            // 返回统一格式的响应
+            if (responseDto.isSuccess()) {
+                return ResponseEntity.ok(ApiResponseVo.success(responseVo, responseDto.getMessage()));
             } else {
-                return ResponseEntity.internalServerError().body(result.toMap());
+                return ResponseEntity.ok(ApiResponseVo.error(
+                    responseDto.getMessage() != null ? responseDto.getMessage() : "生成分配计划失败",
+                    responseDto.getError() != null ? responseDto.getError() : "GENERATION_FAILED"
+                ));
             }
             
         } catch (Exception e) {
             log.error("一键生成分配方案失败", e);
-            return ApiResponses.internalError("一键生成分配方案失败: " + e.getMessage(), "GENERATION_FAILED");
+            return ResponseEntity.ok(ApiResponseVo.error(
+                "一键生成分配方案失败: " + e.getMessage(), 
+                "GENERATION_FAILED"
+            ));
         }
     }
 
@@ -102,30 +113,40 @@ public class DistributionCalculateController {
      * @param year    年份（必填）
      * @param month   月份（必填）
      * @param weekSeq 周序号（必填）
-     * @return 汇总结果映射，包含 success 标识与总量；失败仍返回 200 但 success=false
+     * @return 统一格式的API响应
      *
      * @example POST /api/calculate/total-actual-delivery?year=2025&month=9&weekSeq=3
      */
     @PostMapping("/total-actual-delivery")
-    public ResponseEntity<Map<String, Object>> calculateTotalActualDelivery(@RequestParam Integer year,
+    public ResponseEntity<ApiResponseVo<TotalActualDeliveryResponseVo>> calculateTotalActualDelivery(
+            @RequestParam Integer year,
                                                                            @RequestParam Integer month,
                                                                            @RequestParam Integer weekSeq) {
         log.info("接收总实际投放量计算请求，年份: {}, 月份: {}, 周序号: {}", year, month, weekSeq);
         
         try {
-            // 调用Service层，所有业务逻辑都在Service层
-            TotalActualDeliveryResponseDto result = distributionService.calculateTotalActualDelivery(year, month, weekSeq);
+            // 调用Service层
+            TotalActualDeliveryResponseDto responseDto = distributionService.calculateTotalActualDelivery(year, month, weekSeq);
             
-            // 根据Service返回的结果构建HTTP响应
-            if (result.isSuccess()) {
-                return ResponseEntity.ok(result.toMap());
+            // DTO 转 VO
+            TotalActualDeliveryResponseVo responseVo = converter.toVo(responseDto);
+            
+            // 返回统一格式的响应（即使失败也返回200，但success=false）
+            if (responseDto.isSuccess()) {
+                return ResponseEntity.ok(ApiResponseVo.success(responseVo, responseDto.getMessage()));
             } else {
-                return ResponseEntity.ok(result.toMap()); // 即使失败也返回200，但success=false
+                return ResponseEntity.ok(ApiResponseVo.error(
+                    responseDto.getMessage() != null ? responseDto.getMessage() : "计算总实际投放量失败",
+                    "CALCULATION_FAILED"
+                ));
             }
             
         } catch (Exception e) {
             log.error("总实际投放量计算失败", e);
-            return ApiResponses.internalError("总实际投放量计算失败: " + e.getMessage(), "INTERNAL_ERROR");
+            return ResponseEntity.ok(ApiResponseVo.error(
+                "总实际投放量计算失败: " + e.getMessage(), 
+                "INTERNAL_ERROR"
+            ));
         }
     }
 }

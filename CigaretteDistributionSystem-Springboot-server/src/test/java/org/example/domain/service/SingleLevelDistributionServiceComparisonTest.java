@@ -1,6 +1,6 @@
 package org.example.domain.service;
 
-import org.example.algorithm.impl.DefaultSingleLevelDistributionAlgorithm;
+import org.example.infrastructure.algorithm.impl.DefaultSingleLevelDistributionAlgorithm;
 import org.example.domain.service.algorithm.SingleLevelDistributionService;
 import org.example.domain.service.algorithm.impl.SingleLevelDistributionServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
