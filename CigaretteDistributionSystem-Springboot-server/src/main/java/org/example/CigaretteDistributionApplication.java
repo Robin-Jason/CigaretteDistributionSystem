@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableCaching
 @EnableScheduling
-@org.mybatis.spring.annotation.MapperScan({ "org.example.mapper"})
+@org.mybatis.spring.annotation.MapperScan({ "org.example.infrastructure.persistence.mapper"})
 public class CigaretteDistributionApplication {
     public static void main(String[] args) {
         SpringApplication.run(CigaretteDistributionApplication.class, args);

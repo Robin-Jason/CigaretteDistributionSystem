@@ -4,9 +4,9 @@
 <!--
   BaseCustomerInfoMapper XML
   作用：承载 base_customer_info 的动态建表、插入、查询等自定义 SQL。
-  约定：namespace 对应 org.example.mapper.BaseCustomerInfoMapper，方法名与接口保持一致。
+  约定：namespace 对应 org.example.infrastructure.persistence.mapper.BaseCustomerInfoMapper，方法名与接口保持一致。
 -->
-<mapper namespace="org.example.mapper.BaseCustomerInfoMapper">
+<mapper namespace="org.example.infrastructure.persistence.mapper.BaseCustomerInfoMapper">
 
     <!-- Map 结果集：保持列顺序，便于动态列处理 -->
     <resultMap id="mapResult" type="java.util.LinkedHashMap"/>

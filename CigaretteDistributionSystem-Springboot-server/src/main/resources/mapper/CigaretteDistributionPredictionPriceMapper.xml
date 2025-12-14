@@ -4,7 +4,7 @@
   CigaretteDistributionPredictionPriceMapper XML
   作用：价位段预测表（cigarette_distribution_prediction_price）的查询、批量 UPSERT、按卷烟删除。
 -->
-<mapper namespace="org.example.mapper.CigaretteDistributionPredictionPriceMapper">
+<mapper namespace="org.example.infrastructure.persistence.mapper.CigaretteDistributionPredictionPriceMapper">
 
     <!-- 查询指定分区全部记录 -->
     <select id="findAll" resultType="map">
@@ -17,7 +17,7 @@
     </select>
 
     <!-- 单条 UPSERT -->
-    <insert id="upsert" parameterType="org.example.entity.CigaretteDistributionPredictionData">
+    <insert id="upsert" parameterType="org.example.infrastructure.persistence.po.CigaretteDistributionPredictionPO">
         INSERT INTO `cigarette_distribution_prediction_price`
         (YEAR, MONTH, WEEK_SEQ, CIG_CODE, CIG_NAME, DELIVERY_AREA, DELIVERY_METHOD, DELIVERY_ETYPE, TAG, TAG_FILTER_CONFIG,
          D30, D29, D28, D27, D26, D25, D24, D23, D22, D21,
@@ -79,7 +79,7 @@
     </insert>
 
     <!-- 全字段定点更新 -->
-    <update id="updateOne" parameterType="org.example.entity.CigaretteDistributionPredictionData">
+    <update id="updateOne" parameterType="org.example.infrastructure.persistence.po.CigaretteDistributionPredictionPO">
         UPDATE `cigarette_distribution_prediction_price`
         SET DELIVERY_AREA     = #{deliveryArea},
             DELIVERY_METHOD   = #{deliveryMethod},

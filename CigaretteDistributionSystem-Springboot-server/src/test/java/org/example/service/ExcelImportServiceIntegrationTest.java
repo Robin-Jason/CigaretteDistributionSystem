@@ -1,6 +1,6 @@
 package org.example.service;
 
-import org.example.dto.DataImportRequestDto;
+import org.example.application.dto.DataImportRequestDto;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +20,7 @@ import java.util.Map;
 class ExcelImportServiceIntegrationTest {
 
     @Autowired
-    private ExcelImportService excelImportService;
+    private org.example.application.service.ExcelImportService excelImportService;
 
     @Test
     void importFullData_withBaseAndCigaretteFiles_shouldSucceed() throws Exception {

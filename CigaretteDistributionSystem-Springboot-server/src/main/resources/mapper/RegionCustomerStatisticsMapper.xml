@@ -4,7 +4,7 @@
   RegionCustomerStatisticsMapper XML
   作用：region_customer_statistics 分区表的查询、批量 UPSERT、删除、计数。
 -->
-<mapper namespace="org.example.mapper.RegionCustomerStatisticsMapper">
+<mapper namespace="org.example.infrastructure.persistence.mapper.RegionCustomerStatisticsMapper">
 
     <!-- 查询指定分区全部记录 -->
     <select id="findAll" resultType="map">

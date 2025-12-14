@@ -1,8 +1,9 @@
 package org.example.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.example.dto.GenerateDistributionPlanRequestDto;
-import org.example.dto.GenerateDistributionPlanResponseDto;
+import org.example.application.service.DistributionCalculateService;
+import org.example.application.dto.GenerateDistributionPlanRequestDto;
+import org.example.application.dto.GenerateDistributionPlanResponseDto;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -57,10 +58,12 @@ public class GenerateDistributionPlanIntegrationTest {
         int month = 9;
         int week = 3;
 
+        // 修复：cigarette_distribution_info表每个卷烟只有一条记录，而prediction表每个区域一条记录
+        // 使用MAX(i.ADV)避免JOIN时ADV被重复计算
         String sql = "SELECT p.CIG_CODE AS cig_code, p.CIG_NAME AS cig_name, " +
                 "SUM(IFNULL(p.ACTUAL_DELIVERY,0)) AS actual_total, " +
-                "SUM(IFNULL(i.ADV,0)) AS adv_total, " +
-                "ABS(SUM(IFNULL(p.ACTUAL_DELIVERY,0))-SUM(IFNULL(i.ADV,0))) AS abs_error " +
+                "MAX(IFNULL(i.ADV,0)) AS adv_total, " +
+                "ABS(SUM(IFNULL(p.ACTUAL_DELIVERY,0))-MAX(IFNULL(i.ADV,0))) AS abs_error " +
                 "FROM cigarette_distribution_prediction p " +
                 "JOIN cigarette_distribution_info i ON p.YEAR=i.YEAR AND p.MONTH=i.MONTH AND p.WEEK_SEQ=i.WEEK_SEQ " +
                 "AND p.CIG_CODE=i.CIG_CODE AND p.CIG_NAME=i.CIG_NAME " +

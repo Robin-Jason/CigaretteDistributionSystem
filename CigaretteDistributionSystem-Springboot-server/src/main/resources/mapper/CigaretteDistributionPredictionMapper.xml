@@ -3,12 +3,12 @@
 <!--
   CigaretteDistributionPredictionMapper XML
   作用：预测分配表的 UPSERT、批量 UPSERT、定点更新、批量更新档位、联表查询。
-  约定：namespace 对应 org.example.mapper.CigaretteDistributionPredictionMapper。
+  约定：namespace 对应 org.example.infrastructure.persistence.mapper.CigaretteDistributionPredictionMapper。
 -->
-<mapper namespace="org.example.mapper.CigaretteDistributionPredictionMapper">
+<mapper namespace="org.example.infrastructure.persistence.mapper.CigaretteDistributionPredictionMapper">
 
     <!-- 单条 UPSERT -->
-    <insert id="upsert" parameterType="org.example.entity.CigaretteDistributionPredictionData">
+    <insert id="upsert" parameterType="org.example.infrastructure.persistence.po.CigaretteDistributionPredictionPO">
         INSERT INTO `cigarette_distribution_prediction`
         (YEAR, MONTH, WEEK_SEQ, CIG_CODE, CIG_NAME, DELIVERY_AREA, DELIVERY_METHOD, DELIVERY_ETYPE, TAG, TAG_FILTER_CONFIG,
          D30, D29, D28, D27, D26, D25, D24, D23, D22, D21,
@@ -70,7 +70,7 @@
     </insert>
 
     <!-- 定点更新（全字段） -->
-    <update id="updateOne" parameterType="org.example.entity.CigaretteDistributionPredictionData">
+    <update id="updateOne" parameterType="org.example.infrastructure.persistence.po.CigaretteDistributionPredictionPO">
         UPDATE `cigarette_distribution_prediction`
         SET DELIVERY_AREA     = #{deliveryArea},
             DELIVERY_METHOD   = #{deliveryMethod},
@@ -129,6 +129,33 @@
           AND p.WEEK_SEQ = #{weekSeq}
         ORDER BY p.CIG_CODE, p.CIG_NAME, p.DELIVERY_AREA
     </select>
+
+    <!-- 查询指定年月周的所有预测数据 -->
+    <select id="findAll" resultType="map">
+        SELECT *
+        FROM `cigarette_distribution_prediction`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+        ORDER BY CIG_CODE, CIG_NAME, DELIVERY_AREA
+    </select>
+
+    <!-- 统计指定年月周的记录数 -->
+    <select id="count" resultType="long">
+        SELECT COUNT(*)
+        FROM `cigarette_distribution_prediction`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+    </select>
+
+    <!-- 删除指定年月周的所有预测数据 -->
+    <delete id="deleteByYearMonthWeekSeq">
+        DELETE FROM `cigarette_distribution_prediction`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+    </delete>
 
 </mapper>
 

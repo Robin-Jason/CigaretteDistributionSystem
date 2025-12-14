@@ -4,7 +4,7 @@
   TemporaryCustomerTableMapper XML
   作用：动态临时表的创建、删除、查询。表名由调用方严格校验后传入。
 -->
-<mapper namespace="org.example.mapper.TemporaryCustomerTableMapper">
+<mapper namespace="org.example.infrastructure.persistence.mapper.TemporaryCustomerTableMapper">
 
     <!-- 基于 base_customer_info 创建临时表 -->
     <update id="createTableFromBase">

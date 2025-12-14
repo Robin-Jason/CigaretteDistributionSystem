@@ -3,12 +3,12 @@
 <!--
   CigaretteDistributionInfoMapper XML
   作用：承载卷烟投放信息表的 UPSERT 与定点更新 SQL。
-  约定：namespace 对应 org.example.mapper.CigaretteDistributionInfoMapper，方法名与接口保持一致。
+  约定：namespace 对应 org.example.infrastructure.persistence.mapper.CigaretteDistributionInfoMapper，方法名与接口保持一致。
 -->
-<mapper namespace="org.example.mapper.CigaretteDistributionInfoMapper">
+<mapper namespace="org.example.infrastructure.persistence.mapper.CigaretteDistributionInfoMapper">
 
     <!-- 单条 UPSERT -->
-    <insert id="upsert" parameterType="org.example.entity.CigaretteDistributionInfoData">
+    <insert id="upsert" parameterType="org.example.infrastructure.persistence.po.CigaretteDistributionInfoPO">
         INSERT INTO `cigarette_distribution_info`
         (YEAR, MONTH, WEEK_SEQ, CIG_CODE, CIG_NAME, SUPPLY_ATTRIBUTE, URS, DELIVERY_METHOD, DELIVERY_ETYPE, TAG,
          ADV, DELIVERY_AREA, BZ, TAG_FILTER_CONFIG)
@@ -51,7 +51,7 @@
     </insert>
 
     <!-- 按主键（年月周 + CIG_CODE/CIG_NAME）定点更新 -->
-    <update id="updateOne" parameterType="org.example.entity.CigaretteDistributionInfoData">
+    <update id="updateOne" parameterType="org.example.infrastructure.persistence.po.CigaretteDistributionInfoPO">
         UPDATE `cigarette_distribution_info`
         SET SUPPLY_ATTRIBUTE = #{supplyAttribute},
             URS              = #{urs},

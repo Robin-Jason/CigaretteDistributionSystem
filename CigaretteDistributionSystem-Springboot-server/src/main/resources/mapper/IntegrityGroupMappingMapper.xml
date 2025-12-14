@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="org.example.mapper.IntegrityGroupMappingMapper">
+<mapper namespace="org.example.infrastructure.persistence.mapper.IntegrityGroupMappingMapper">
 
-    <resultMap id="IntegrityGroupMappingMap" type="org.example.entity.IntegrityGroupMapping">
+    <resultMap id="IntegrityGroupMappingMap" type="org.example.infrastructure.persistence.po.IntegrityGroupMappingPO">
         <id column="id" property="id"/>
         <result column="group_name" property="groupName"/>
         <result column="group_code" property="groupCode"/>
