@@ -12,7 +12,7 @@ import java.util.Map;
  * 双周访销上浮规则领域服务实现。
  * <p>
  * 纯领域逻辑，不含Spring依赖，可独立测试。
- * 该实现复制自 {@link org.example.application.service.impl.BiWeeklyVisitBoostServiceImpl} 的核心业务规则方法，
+ * 该实现复制自 {@link org.example.application.service.coordinator.impl.BiWeeklyVisitBoostServiceImpl} 的核心业务规则方法，
  * 移除了Spring注解和基础设施依赖，保持业务逻辑完全一致。
  * </p>
  *

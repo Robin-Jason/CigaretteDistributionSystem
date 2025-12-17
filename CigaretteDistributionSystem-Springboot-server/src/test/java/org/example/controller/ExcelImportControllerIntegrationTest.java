@@ -1,7 +1,7 @@
 package org.example.controller;
 
 import org.example.application.dto.DataImportRequestDto;
-import org.example.application.service.ExcelImportService;
+import org.example.application.service.importing.ExcelImportService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

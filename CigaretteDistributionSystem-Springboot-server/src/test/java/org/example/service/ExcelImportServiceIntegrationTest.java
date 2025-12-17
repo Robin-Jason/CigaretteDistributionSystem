@@ -21,7 +21,7 @@ import java.util.Map;
 class ExcelImportServiceIntegrationTest {
 
     @Autowired
-    private org.example.application.service.ExcelImportService excelImportService;
+    private org.example.application.service.importing.ExcelImportService excelImportService;
 
     @Test
     void importFullData_withBaseAndCigaretteFiles_shouldSucceed() throws Exception {

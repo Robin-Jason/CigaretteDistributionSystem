@@ -140,6 +140,17 @@
         ORDER BY CIG_CODE, CIG_NAME, DELIVERY_AREA
     </select>
 
+    <!-- 查询指定年月周下某支卷烟的所有预测数据 -->
+    <select id="findByCigCode" resultType="map">
+        SELECT *
+        FROM `cigarette_distribution_prediction`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND CIG_CODE = #{cigCode}
+        ORDER BY CIG_CODE, CIG_NAME, DELIVERY_AREA
+    </select>
+
     <!-- 统计指定年月周的记录数 -->
     <select id="count" resultType="long">
         SELECT COUNT(*)

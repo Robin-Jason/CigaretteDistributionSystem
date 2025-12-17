@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.api.web.converter.PredictionQueryConverter;
 import org.example.api.web.vo.response.ApiResponseVo;
 import org.example.api.web.vo.response.PredictionQueryResponseVo;
+import org.example.application.service.encode.AggregatedEncodingQueryService;
 import org.example.application.service.query.PredictionQueryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +37,9 @@ public class PredictionQueryController {
     
     @Autowired
     private PredictionQueryConverter converter;
+
+    @Autowired
+    private AggregatedEncodingQueryService aggregatedEncodingQueryService;
 
     /**
      * 按时间分区查询预测数据。
@@ -103,6 +107,36 @@ public class PredictionQueryController {
             return ResponseEntity.ok(ApiResponseVo.error(
                 "查询价位段预测分区数据失败: " + e.getMessage(), 
                 "INTERNAL_ERROR"
+            ));
+        }
+    }
+
+    /**
+     * 懒加载：按批次 + 卷烟代码查询“多区域聚合编码表达式”。
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @param cigCode 卷烟代码
+     * @return 聚合编码表达式列表
+     *
+     * @example GET /api/prediction/aggregated-encodings?year=2025&month=9&weekSeq=3&cigCode=42010020
+     */
+    @GetMapping("/aggregated-encodings")
+    public ResponseEntity<ApiResponseVo<List<String>>> aggregatedEncodings(
+            @RequestParam Integer year,
+            @RequestParam Integer month,
+            @RequestParam Integer weekSeq,
+            @RequestParam String cigCode) {
+        try {
+            log.info("查询聚合编码表达式，year={}, month={}, weekSeq={}, cigCode={}", year, month, weekSeq, cigCode);
+            List<String> expressions = aggregatedEncodingQueryService.listAggregatedEncodings(year, month, weekSeq, cigCode);
+            return ResponseEntity.ok(ApiResponseVo.success(expressions, "查询成功"));
+        } catch (Exception e) {
+            log.error("查询聚合编码表达式失败", e);
+            return ResponseEntity.ok(ApiResponseVo.error(
+                    "查询聚合编码表达式失败: " + e.getMessage(),
+                    "INTERNAL_ERROR"
             ));
         }
     }

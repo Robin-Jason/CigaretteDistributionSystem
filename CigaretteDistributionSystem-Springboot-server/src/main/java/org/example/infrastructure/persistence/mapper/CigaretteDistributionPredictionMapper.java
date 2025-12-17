@@ -90,6 +90,20 @@ public interface CigaretteDistributionPredictionMapper extends BaseMapper<Cigare
                                       @Param("weekSeq") Integer weekSeq);
 
     /**
+     * 查询指定年月周下某支卷烟的所有预测记录（按区域）。
+     *
+     * @param year    年
+     * @param month   月
+     * @param weekSeq 周序
+     * @param cigCode 卷烟代码
+     * @return 预测数据列表
+     */
+    List<Map<String, Object>> findByCigCode(@Param("year") Integer year,
+                                            @Param("month") Integer month,
+                                            @Param("weekSeq") Integer weekSeq,
+                                            @Param("cigCode") String cigCode);
+
+    /**
      * 统计指定年月周的记录数
      *
      * @param year 年

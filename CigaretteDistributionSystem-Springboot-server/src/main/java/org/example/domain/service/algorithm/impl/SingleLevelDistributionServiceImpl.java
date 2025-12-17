@@ -172,7 +172,6 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
         int refineIterations = 0;
         BigDecimal currentAmount = amount2;
         final BigDecimal hgCustomerCount = customerRow[0] == null ? BigDecimal.ZERO : customerRow[0];
-        boolean loggedZeroHg = false;
         BigDecimal lastRemainder = null;
         int stagnantRemainderRounds = 0;
         
@@ -444,6 +443,8 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
         }
     }
 
+    // 保留接口兼容性，当前未使用
+    @SuppressWarnings("unused")
     private BigDecimal calculateTotalAmount(BigDecimal[][] allocationMatrix,
                                             BigDecimal[][] regionCustomerMatrix,
                                             int gradeCount) {

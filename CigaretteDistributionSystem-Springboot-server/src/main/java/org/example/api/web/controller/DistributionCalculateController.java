@@ -9,7 +9,7 @@ import org.example.api.web.vo.response.TotalActualDeliveryResponseVo;
 import org.example.application.dto.GenerateDistributionPlanRequestDto;
 import org.example.application.dto.GenerateDistributionPlanResponseDto;
 import org.example.application.dto.TotalActualDeliveryResponseDto;
-import org.example.application.service.DistributionCalculateService;
+import org.example.application.service.calculate.DistributionCalculateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

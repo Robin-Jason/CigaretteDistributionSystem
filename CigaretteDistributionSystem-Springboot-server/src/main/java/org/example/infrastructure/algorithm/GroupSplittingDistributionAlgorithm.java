@@ -6,7 +6,13 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * 多区域带权重的分配算法
+ * 多区域带权重的分配算法（历史版本最新算法，实现已迁移到domain，仅用于对比与回归验证）：
+ * <ol>
+ *     <li>分组拆分阶段：根据分组与比例，将目标量拆分到各分组。</li>
+ *     <li>分组独立分配阶段：对每个分组独立运行分配算法。</li>
+ *     <li>方案选择：从多个候选方案中选择误差最小的方案（误差相同时选择编号较大的方案）。</li>
+ *     <li>非递增约束：确保每一区域的档位为非递增序列（D30 >= ... >= D1）。</li>
+ * </ol>    
  */
 public interface GroupSplittingDistributionAlgorithm {
 

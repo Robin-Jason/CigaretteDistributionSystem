@@ -471,9 +471,9 @@ public class ApiIntegrationTest {
         // 步骤1: 导入数据
         log.info("步骤1: 导入Excel数据...");
         MockMultipartFile cigaretteFile = loadExcelFile("cigarette_distribution_info.xlsx");
-        
+
         MvcResult importResult = mockMvc.perform(multipart("/api/import/data")
-                .file("cigaretteDistributionInfoFile", cigaretteFile.getBytes())
+                .file(cigaretteFile)
                 .param("year", String.valueOf(TEST_YEAR))
                 .param("month", String.valueOf(TEST_MONTH))
                 .param("weekSeq", String.valueOf(TEST_WEEK_SEQ))

@@ -6,7 +6,7 @@ import org.example.api.web.vo.request.DataImportRequestVo;
 import org.example.api.web.vo.response.ApiResponseVo;
 import org.example.api.web.vo.response.DataImportResponseVo;
 import org.example.application.dto.DataImportRequestDto;
-import org.example.application.service.ExcelImportService;
+import org.example.application.service.importing.ExcelImportService;
 import org.example.shared.util.UploadValidators;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

@@ -10,9 +10,10 @@ import java.util.List;
 /**
  * 多区域无权重分配领域服务实现。
  * <p>
- * 封装了多区域无权重分配的核心算法逻辑，不依赖于Spring框架或持久化层。
- * 该实现复制自 {@link org.example.infrastructure.algorithm.impl.DefaultColumnWiseAdjustmentAlgorithm}，
- * 移除了Spring注解和日志依赖，保持算法逻辑完全一致。
+ *     <li>粗调阶段：从最高档位（HG）到最低档位（LG），多轮逐档位列+1（整列+1），直到刚好超出目标。</li>
+ *     <li>高档位微调阶段：撤销粗调方案最后一次档位列+1操作，基于此进行迭代微调，生成多个候选方案。</li>
+ *     <li>方案选择：从4个候选方案中选择误差最小的方案（误差相同时选择编号较大的方案）。</li>
+ *     <li>非递增约束：确保每一区域的档位为非递增序列（D30 >= ... >= D1）。</li>
  * </p>
  *
  * @author Robin
@@ -573,14 +574,12 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
 
         HgSubsetCandidate4Result result = new HgSubsetCandidate4Result();
         result.matrix = candidate4;
-        result.amount = amount4;
         result.error = error4;
         return result;
     }
 
     private static final class HgSubsetCandidate4Result {
         private BigDecimal[][] matrix;
-        private BigDecimal amount;
         private BigDecimal error;
     }
 

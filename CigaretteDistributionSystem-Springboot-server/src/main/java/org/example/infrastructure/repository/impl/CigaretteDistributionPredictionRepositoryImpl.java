@@ -59,6 +59,14 @@ public class CigaretteDistributionPredictionRepositoryImpl implements CigaretteD
     }
 
     @Override
+    public List<Map<String, Object>> findByCigCode(Integer year, Integer month, Integer weekSeq, String cigCode) {
+        partitionTableManager.ensurePartitionExists(TABLE_NAME, year, month, weekSeq);
+        List<Map<String, Object>> result = predictionMapper.findByCigCode(year, month, weekSeq, cigCode);
+        log.debug("查询卷烟预测数据: {}-{}-{}, cigCode={}, 返回 {} 条记录", year, month, weekSeq, cigCode, result.size());
+        return result;
+    }
+
+    @Override
     public int delete(QueryWrapper<CigaretteDistributionPredictionPO> queryWrapper) {
         return predictionMapper.delete(queryWrapper);
     }

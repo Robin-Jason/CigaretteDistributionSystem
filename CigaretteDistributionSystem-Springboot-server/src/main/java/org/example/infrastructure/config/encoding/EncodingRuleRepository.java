@@ -116,11 +116,31 @@ public class EncodingRuleRepository {
             return null;
         }
         String trimmed = label.trim();
+        // 1) 直接匹配原始/归一化标签
         String direct = extensionTypeCodes.get(trimmed);
         if (direct != null) {
             return direct;
         }
-        return extensionTypeCodes.get(normalize(trimmed));
+        String normalized = normalize(trimmed);
+        direct = extensionTypeCodes.get(normalized);
+        if (direct != null) {
+            return direct;
+        }
+
+        // 2) 兼容别名：通过 DeliveryExtensionType 解析出规范显示名再查一次
+        //    例如：label="档位+区县+市场类型" -> DeliveryExtensionType.COUNTY -> 使用显示名 "区县" 查询编码
+        java.util.Optional<org.example.domain.model.valueobject.DeliveryExtensionType> typeOpt =
+                org.example.domain.model.valueobject.DeliveryExtensionType.from(label);
+        if (typeOpt.isPresent()) {
+            String displayName = typeOpt.get().getDisplayName();
+            String byDisplay = extensionTypeCodes.get(displayName);
+            if (byDisplay != null) {
+                return byDisplay;
+            }
+            return extensionTypeCodes.get(normalize(displayName));
+        }
+
+        return null;
     }
 
     /**

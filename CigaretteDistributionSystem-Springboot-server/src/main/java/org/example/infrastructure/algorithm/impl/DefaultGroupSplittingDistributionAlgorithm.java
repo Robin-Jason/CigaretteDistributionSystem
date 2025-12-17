@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * 默认分组拆 target 算法实现。
+ * 默认分组拆 target 算法实现（历史最新算法，实现已迁移到领域服务，仅用于对比与回归验证）。
  * <p>
  * 支持任意数量的分组与权重，常用于：
  * <ul>

@@ -25,6 +25,19 @@ public interface CigaretteDistributionPredictionRepository {
     List<Map<String, Object>> findAllWithAdv(Integer year, Integer month, Integer weekSeq);
 
     /**
+     * 查询指定年月周下某支卷烟的所有预测记录（按区域）。
+     *
+     * <p>用于前端“点击卷烟后懒加载聚合编码表达式”等场景，避免全批次查询后再过滤。</p>
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @param cigCode 卷烟代码
+     * @return 该卷烟在该批次下的预测数据列表（Map形式，字段同 prediction 表）
+     */
+    List<Map<String, Object>> findByCigCode(Integer year, Integer month, Integer weekSeq, String cigCode);
+
+    /**
      * 查询指定年月周的所有预测数据
      *
      * @param year    年份

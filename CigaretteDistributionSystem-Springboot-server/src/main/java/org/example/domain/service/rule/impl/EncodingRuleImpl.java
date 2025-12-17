@@ -8,7 +8,7 @@ import java.math.BigDecimal;
  * 编码规则领域服务实现。
  * <p>
  * 纯领域逻辑，不含Spring依赖，可独立测试。
- * 该实现复制自 {@link org.example.application.service.impl.EncodeServiceImpl} 的核心业务规则方法，
+ * 该实现复制自 {@link org.example.application.service.encode.EncodeServiceImpl} 的核心业务规则方法，
  * 移除了Spring注解和基础设施依赖，保持业务逻辑完全一致。
  * </p>
  *

@@ -9,7 +9,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * 默认多区域无权重分配算法实现（新算法）：
+ * 默认多区域无权重分配算法实现（历史最新算法，实现已迁移到领域服务，仅用于对比与回归验证）：
  * <ol>
  *     <li>粗调阶段：从最高档位（HG）到最低档位（LG），多轮逐档位列+1（整列+1），直到刚好超出目标。</li>
  *     <li>高档位微调阶段：撤销粗调方案最后一次档位列+1操作，基于此进行迭代微调，生成多个候选方案。</li>
@@ -600,14 +600,12 @@ public class DefaultColumnWiseAdjustmentAlgorithm implements ColumnWiseAdjustmen
 
         HgSubsetCandidate4Result result = new HgSubsetCandidate4Result();
         result.matrix = candidate4;
-        result.amount = amount4;
         result.error = error4;
         return result;
     }
 
     private static final class HgSubsetCandidate4Result {
         private BigDecimal[][] matrix;
-        private BigDecimal amount;
         private BigDecimal error;
     }
 

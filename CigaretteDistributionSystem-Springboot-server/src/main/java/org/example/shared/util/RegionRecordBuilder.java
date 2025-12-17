@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.shared.dto.RegionCustomerRecord;
 import org.example.domain.repository.TemporaryCustomerTableRepository;
-import org.example.application.service.TagExtractionService;
+import org.example.application.service.coordinator.TagExtractionService;
 import org.example.domain.model.valueobject.DeliveryExtensionType;
 import org.example.domain.model.tag.TagFilterRule;
 import org.springframework.stereotype.Component;

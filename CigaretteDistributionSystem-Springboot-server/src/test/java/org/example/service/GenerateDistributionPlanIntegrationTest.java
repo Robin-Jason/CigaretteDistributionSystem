@@ -1,7 +1,7 @@
 package org.example.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.example.application.service.DistributionCalculateService;
+import org.example.application.service.calculate.DistributionCalculateService;
 import org.example.application.dto.GenerateDistributionPlanRequestDto;
 import org.example.application.dto.GenerateDistributionPlanResponseDto;
 import org.junit.jupiter.api.AfterEach;
