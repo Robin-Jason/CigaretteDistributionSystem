@@ -60,5 +60,16 @@ public class IntegrityGroupMappingRepositoryImpl implements IntegrityGroupMappin
     public List<IntegrityGroupMappingPO> selectAllOrderBySort() {
         return integrityGroupMappingMapper.selectAllOrderBySort();
     }
+
+    /**
+     * 根据 GROUP_NAME 查询 GROUP_CODE
+     *
+     * @param groupName 小组名称
+     * @return 小组编码，如果未找到则返回 null
+     */
+    @Override
+    public String selectGroupCodeByGroupName(String groupName) {
+        return integrityGroupMappingMapper.selectGroupCodeByGroupName(groupName);
+    }
 }
 

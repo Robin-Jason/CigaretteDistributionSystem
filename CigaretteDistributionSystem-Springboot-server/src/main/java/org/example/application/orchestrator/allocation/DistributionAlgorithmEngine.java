@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -81,6 +82,13 @@ public class DistributionAlgorithmEngine {
         BigDecimal[][] matrix = buildMatrix(rows);
         GradeRange gradeRange = resolveGradeRange(request.getMaxGrade(), request.getMinGrade());
         BigDecimal[][] compactCustomerMatrix = compactMatrixToRange(matrix, gradeRange);
+
+        // 统一检查：在调用具体算法前，检查是否存在某一行全为0的情况
+        String zeroRowCheckResult = validateNoZeroRows(regions, compactCustomerMatrix);
+        if (zeroRowCheckResult != null) {
+            log.error("分配算法执行前检查失败: {}", zeroRowCheckResult);
+            return StrategyExecutionResult.failure(zeroRowCheckResult);
+        }
 
         // 使用可扩展的比例提供者计算分组比例和映射
         Map<String, BigDecimal> groupRatios = calculateGroupRatios(request, regions, compactCustomerMatrix);
@@ -658,6 +666,57 @@ public class DistributionAlgorithmEngine {
         SINGLE_LEVEL,
         COLUMN_WISE,
         GROUP_SPLITTING
+    }
+
+    /**
+     * 验证客户矩阵中不存在全为0的行。
+     * <p>
+     * 如果发现某一行（区域）的所有档位客户数全为0，返回错误信息。
+     * 这是分配算法的前置条件，因为全为0的区域无法进行有效分配。
+     * </p>
+     *
+     * @param regions 区域列表（与矩阵行一一对应）
+     * @param customerMatrix 客户矩阵（区域 x 档位）
+     * @return 如果验证通过返回 null；如果发现全为0的行，返回错误信息
+     */
+    private String validateNoZeroRows(List<String> regions, BigDecimal[][] customerMatrix) {
+        if (customerMatrix == null || customerMatrix.length == 0) {
+            return "客户矩阵为空，无法进行分配";
+        }
+        
+        if (regions == null || regions.size() != customerMatrix.length) {
+            return String.format("区域列表与客户矩阵行数不匹配: regions=%d, matrix=%d", 
+                    regions != null ? regions.size() : 0, customerMatrix.length);
+        }
+        
+        List<String> zeroRowRegions = new ArrayList<>();
+        for (int r = 0; r < customerMatrix.length; r++) {
+            BigDecimal[] row = customerMatrix[r];
+            if (row == null || row.length == 0) {
+                zeroRowRegions.add(regions.get(r));
+                continue;
+            }
+            
+            // 检查该行的所有档位是否全为0
+            boolean allZero = true;
+            for (BigDecimal value : row) {
+                if (value != null && value.compareTo(BigDecimal.ZERO) > 0) {
+                    allZero = false;
+                    break;
+                }
+            }
+            
+            if (allZero) {
+                zeroRowRegions.add(regions.get(r));
+            }
+        }
+        
+        if (!zeroRowRegions.isEmpty()) {
+            return String.format("以下区域在客户矩阵中30个档位客户数全为0，无法进行分配: %s。请确保这些区域在 region_customer_statistics 表中有有效的客户数据。",
+                    String.join(", ", zeroRowRegions));
+        }
+        
+        return null; // 验证通过
     }
 
     /**

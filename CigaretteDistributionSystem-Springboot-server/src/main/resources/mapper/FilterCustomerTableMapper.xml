@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  FilterCustomerTableMapper XML
+  作用：customer_filter 分区表的操作，包括插入、查询、统计等。
+-->
+<mapper namespace="org.example.infrastructure.persistence.mapper.FilterCustomerTableMapper">
+
+    <!-- 确保分区存在并插入数据到 customer_filter 分区表（固定字段版本，向后兼容） -->
+    <update id="ensurePartitionAndInsertData">
+        <!-- 首先确保分区存在（使用存储过程或多次调用） -->
+        <!-- 注意：这里需要先调用 PartitionTableManager.ensurePartitionExists() -->
+        <!-- 然后插入数据 -->
+        INSERT INTO `customer_filter` (
+            YEAR, MONTH, WEEK_SEQ,
+            CUST_CODE, CUST_ID, GRADE, ORDER_CYCLE, CREDIT_LEVEL, MARKET_TYPE,
+            CLASSIFICATION_CODE, CUST_FORMAT, BUSINESS_DISTRICT_TYPE,
+            COMPANY_BRANCH, COMPANY_DISTRICT, MARKET_DEPARTMENT,
+            BUSINESS_STATUS, IS_MUTUAL_AID_GROUP, GROUP_NAME,
+            QUALITY_DATA_SHARE, DYNAMIC_TAGS
+        )
+        SELECT
+            #{year}, #{month}, #{weekSeq},
+            CUST_CODE, CUST_ID, GRADE, ORDER_CYCLE, CREDIT_LEVEL, MARKET_TYPE,
+            CLASSIFICATION_CODE, CUST_FORMAT, BUSINESS_DISTRICT_TYPE,
+            COMPANY_BRANCH, 
+            LEFT(COMPANY_DISTRICT, 2) AS COMPANY_DISTRICT,
+            REPLACE(MARKET_DEPARTMENT, '市场部', '') AS MARKET_DEPARTMENT,
+            BUSINESS_STATUS, IS_MUTUAL_AID_GROUP, GROUP_NAME,
+            QUALITY_DATA_SHARE, DYNAMIC_TAGS
+        FROM `base_customer_info`
+        <if test="whereClause != null and whereClause.trim() != ''">
+            ${whereClause}
+        </if>
+    </update>
+
+    <!-- 确保分区存在并插入数据到 customer_filter 分区表（动态字段版本） -->
+    <update id="ensurePartitionAndInsertDataDynamic">
+        INSERT INTO `customer_filter` (
+            YEAR, MONTH, WEEK_SEQ,
+            <foreach collection="columns" item="col" separator=",">
+                `${col}`
+            </foreach>
+        )
+        SELECT
+            #{year}, #{month}, #{weekSeq},
+            <foreach collection="columns" item="col" separator=",">
+                <choose>
+                    <!-- COMPANY_DISTRICT字段：只取前两个字 -->
+                    <when test="col == 'COMPANY_DISTRICT'">
+                        LEFT(`${col}`, 2)
+                    </when>
+                    <!-- MARKET_DEPARTMENT字段：去掉"市场部"后缀 -->
+                    <when test="col == 'MARKET_DEPARTMENT'">
+                        REPLACE(`${col}`, '市场部', '')
+                    </when>
+                    <!-- 其他字段：直接复制 -->
+                    <otherwise>
+                        `${col}`
+                    </otherwise>
+                </choose>
+            </foreach>
+        FROM `base_customer_info`
+        <if test="whereClause != null and whereClause.trim() != ''">
+            ${whereClause}
+        </if>
+    </update>
+
+    <!-- 截断分区数据（TRUNCATE PARTITION，比表截断更快） -->
+    <update id="truncatePartition">
+        ALTER TABLE `customer_filter` TRUNCATE PARTITION ${partitionName}
+    </update>
+
+    <!-- 统计分区记录数 -->
+    <select id="countPartition" resultType="long">
+        SELECT COUNT(*) FROM `customer_filter`
+        WHERE YEAR = #{year} AND MONTH = #{month} AND WEEK_SEQ = #{weekSeq}
+    </select>
+
+    <!-- 查询分区数据 -->
+    <select id="queryPartition" resultType="map">
+        SELECT
+        <choose>
+            <when test="columns != null and columns.size() > 0">
+                <foreach collection="columns" item="col" separator=",">
+                    `${col}`
+                </foreach>
+            </when>
+            <otherwise>*</otherwise>
+        </choose>
+        FROM `customer_filter`
+        WHERE YEAR = #{year} AND MONTH = #{month} AND WEEK_SEQ = #{weekSeq}
+    </select>
+
+    <!-- DISTINCT ORDER_CYCLE - 分区版本 -->
+    <select id="listOrderCyclesPartition" resultType="string">
+        SELECT DISTINCT ORDER_CYCLE
+        FROM `customer_filter`
+        WHERE YEAR = #{year} AND MONTH = #{month} AND WEEK_SEQ = #{weekSeq}
+          AND ORDER_CYCLE IS NOT NULL
+    </select>
+
+    <!-- 按指定列 DISTINCT 组合（忽略 NULL）- 分区版本 -->
+    <select id="listDistinctCombinationsPartition" resultType="map">
+        SELECT DISTINCT
+        <foreach collection="columns" item="col" separator=",">
+            `${col}`
+        </foreach>
+        FROM `customer_filter`
+        WHERE YEAR = #{year} AND MONTH = #{month} AND WEEK_SEQ = #{weekSeq}
+          AND
+        <foreach collection="columns" item="col" separator=" AND ">
+            `${col}` IS NOT NULL
+        </foreach>
+    </select>
+
+    <!-- 结果映射：GRADE 分组统计（属性名使用大写以匹配代码中的读取方式） -->
+    <resultMap id="gradeStatResultMap" type="java.util.HashMap">
+        <result column="GRADE" property="GRADE" jdbcType="VARCHAR" javaType="java.lang.String"/>
+        <result column="CUSTOMER_COUNT" property="CUSTOMER_COUNT" jdbcType="BIGINT" javaType="java.lang.Long"/>
+    </resultMap>
+
+    <!-- 按条件统计 GRADE 分组客户数 - 分区版本 -->
+    <!-- 业务规则：QUALITY_DATA_SHARE等固定标签字段继续使用固定字段查询，其他动态标签使用JSON字段 -->
+    <select id="statGradesPartition" resultMap="gradeStatResultMap">
+        SELECT GRADE, COUNT(*) AS CUSTOMER_COUNT
+        FROM `customer_filter`
+        WHERE YEAR = #{year} AND MONTH = #{month} AND WEEK_SEQ = #{weekSeq}
+        <if test="filters != null">
+            <foreach collection="filters" index="key" item="value">
+                AND `${key}` = #{value}
+            </foreach>
+        </if>
+        <if test="tagColumn != null and tagOperator != null and tagValue != null">
+            <!-- 判断是否为固定标签字段（如QUALITY_DATA_SHARE）或动态标签（JSON字段） -->
+            <choose>
+                <!-- 固定标签字段：直接使用固定字段查询 -->
+                <when test="tagColumn == 'QUALITY_DATA_SHARE'">
+            AND `${tagColumn}` ${tagOperator} #{tagValue}
+                </when>
+                <!-- 动态标签：从JSON字段查询，使用中文键名 -->
+                <!-- 注意：对于中文键名，直接使用字符串拼接构建JSON路径 -->
+                <otherwise>
+                    AND JSON_EXTRACT(DYNAMIC_TAGS, '$.${tagColumn}') ${tagOperator} #{tagValue}
+                </otherwise>
+            </choose>
+        </if>
+        <if test="orderCyclePattern != null and orderCyclePattern != ''">
+            AND `ORDER_CYCLE` LIKE #{orderCyclePattern}
+        </if>
+        GROUP BY GRADE
+    </select>
+
+</mapper>
+

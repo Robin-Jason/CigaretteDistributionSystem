@@ -6,13 +6,49 @@
 -->
 <mapper namespace="org.example.infrastructure.persistence.mapper.RegionCustomerStatisticsMapper">
 
-    <!-- 查询指定分区全部记录 -->
-    <select id="findAll" resultType="map">
-        SELECT REGION,
-               D30, D29, D28, D27, D26, D25, D24, D23, D22, D21,
-               D20, D19, D18, D17, D16, D15, D14, D13, D12, D11,
-               D10, D9, D8, D7, D6, D5, D4, D3, D2, D1,
-               TOTAL
+    <!-- 结果映射：避免全局 Map 类型 TypeHandler 干扰，显式指定列类型与属性名（使用小写属性名便于 Map 访问） -->
+    <resultMap id="regionStatsResultMap" type="java.util.HashMap">
+        <result column="region" property="region" jdbcType="VARCHAR" javaType="java.lang.String"/>
+        <result column="d30" property="d30" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d29" property="d29" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d28" property="d28" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d27" property="d27" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d26" property="d26" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d25" property="d25" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d24" property="d24" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d23" property="d23" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d22" property="d22" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d21" property="d21" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d20" property="d20" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d19" property="d19" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d18" property="d18" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d17" property="d17" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d16" property="d16" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d15" property="d15" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d14" property="d14" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d13" property="d13" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d12" property="d12" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d11" property="d11" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d10" property="d10" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d9" property="d9" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d8" property="d8" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d7" property="d7" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d6" property="d6" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d5" property="d5" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d4" property="d4" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d3" property="d3" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d2" property="d2" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="d1" property="d1" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+        <result column="total" property="total" jdbcType="DECIMAL" javaType="java.math.BigDecimal"/>
+    </resultMap>
+
+    <!-- 查询指定分区全部记录（使用 resultMap 映射到 Map） -->
+    <select id="findAll" resultMap="regionStatsResultMap">
+        SELECT REGION AS region,
+               D30 AS d30, D29 AS d29, D28 AS d28, D27 AS d27, D26 AS d26, D25 AS d25, D24 AS d24, D23 AS d23, D22 AS d22, D21 AS d21,
+               D20 AS d20, D19 AS d19, D18 AS d18, D17 AS d17, D16 AS d16, D15 AS d15, D14 AS d14, D13 AS d13, D12 AS d12, D11 AS d11,
+               D10 AS d10, D9 AS d9, D8 AS d8, D7 AS d7, D6 AS d6, D5 AS d5, D4 AS d4, D3 AS d3, D2 AS d2, D1 AS d1,
+               TOTAL AS total
         FROM `region_customer_statistics`
         WHERE YEAR = #{year}
           AND MONTH = #{month}
@@ -20,13 +56,13 @@
         ORDER BY REGION
     </select>
 
-    <!-- 按区域查询单条记录 -->
-    <select id="findByRegion" resultType="map">
-        SELECT REGION,
-               D30, D29, D28, D27, D26, D25, D24, D23, D22, D21,
-               D20, D19, D18, D17, D16, D15, D14, D13, D12, D11,
-               D10, D9, D8, D7, D6, D5, D4, D3, D2, D1,
-               TOTAL
+    <!-- 按区域查询单条记录（使用 resultMap） -->
+    <select id="findByRegion" resultMap="regionStatsResultMap">
+        SELECT REGION AS region,
+               D30 AS d30, D29 AS d29, D28 AS d28, D27 AS d27, D26 AS d26, D25 AS d25, D24 AS d24, D23 AS d23, D22 AS d22, D21 AS d21,
+               D20 AS d20, D19 AS d19, D18 AS d18, D17 AS d17, D16 AS d16, D15 AS d15, D14 AS d14, D13 AS d13, D12 AS d12, D11 AS d11,
+               D10 AS d10, D9 AS d9, D8 AS d8, D7 AS d7, D6 AS d6, D5 AS d5, D4 AS d4, D3 AS d3, D2 AS d2, D1 AS d1,
+               TOTAL AS total
         FROM `region_customer_statistics`
         WHERE YEAR = #{year}
           AND MONTH = #{month}
@@ -46,13 +82,13 @@
         VALUES
         <foreach collection="records" item="item" separator=",">
             (#{year}, #{month}, #{weekSeq}, #{item.region},
-             #{item.grades[0]}, #{item.grades[1]}, #{item.grades[2]}, #{item.grades[3]}, #{item.grades[4]},
-             #{item.grades[5]}, #{item.grades[6]}, #{item.grades[7]}, #{item.grades[8]}, #{item.grades[9]},
-             #{item.grades[10]}, #{item.grades[11]}, #{item.grades[12]}, #{item.grades[13]}, #{item.grades[14]},
-             #{item.grades[15]}, #{item.grades[16]}, #{item.grades[17]}, #{item.grades[18]}, #{item.grades[19]},
-             #{item.grades[20]}, #{item.grades[21]}, #{item.grades[22]}, #{item.grades[23]}, #{item.grades[24]},
-             #{item.grades[25]}, #{item.grades[26]}, #{item.grades[27]}, #{item.grades[28]}, #{item.grades[29]},
-             #{item.total})
+             #{item.grades[0],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[1],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[2],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[3],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[4],jdbcType=DECIMAL,javaType=java.math.BigDecimal},
+             #{item.grades[5],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[6],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[7],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[8],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[9],jdbcType=DECIMAL,javaType=java.math.BigDecimal},
+             #{item.grades[10],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[11],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[12],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[13],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[14],jdbcType=DECIMAL,javaType=java.math.BigDecimal},
+             #{item.grades[15],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[16],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[17],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[18],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[19],jdbcType=DECIMAL,javaType=java.math.BigDecimal},
+             #{item.grades[20],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[21],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[22],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[23],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[24],jdbcType=DECIMAL,javaType=java.math.BigDecimal},
+             #{item.grades[25],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[26],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[27],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[28],jdbcType=DECIMAL,javaType=java.math.BigDecimal}, #{item.grades[29],jdbcType=DECIMAL,javaType=java.math.BigDecimal},
+             #{item.total,jdbcType=DECIMAL})
         </foreach>
         ON DUPLICATE KEY UPDATE
             D30 = VALUES(D30), D29 = VALUES(D29), D28 = VALUES(D28), D27 = VALUES(D27), D26 = VALUES(D26),

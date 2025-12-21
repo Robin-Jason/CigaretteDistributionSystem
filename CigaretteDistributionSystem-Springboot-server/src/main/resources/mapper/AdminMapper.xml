@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.infrastructure.persistence.mapper.AdminMapper">
+
+    <select id="listTableColumns" resultType="map">
+        SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, COLUMN_COMMENT
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = #{tableName}
+        ORDER BY ORDINAL_POSITION
+    </select>
+
+    <select id="listPartitions" resultType="string">
+        SELECT PARTITION_NAME
+        FROM information_schema.PARTITIONS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = #{tableName}
+          AND PARTITION_NAME IS NOT NULL
+        ORDER BY PARTITION_ORDINAL_POSITION
+    </select>
+
+    <select id="countPartition" resultType="int">
+        SELECT COUNT(*) FROM information_schema.PARTITIONS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = #{tableName}
+          AND PARTITION_NAME = #{partitionName}
+    </select>
+
+    <select id="getMaxPartitionDescription" resultType="string">
+        SELECT PARTITION_DESCRIPTION FROM information_schema.PARTITIONS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = #{tableName}
+          AND PARTITION_NAME != 'p_future'
+          AND PARTITION_DESCRIPTION IS NOT NULL
+          AND PARTITION_DESCRIPTION != 'MAXVALUE'
+        ORDER BY CAST(PARTITION_DESCRIPTION AS UNSIGNED) DESC
+        LIMIT 1
+    </select>
+
+    <update id="executeSql">
+        ${sql}
+    </update>
+
+    <!-- ===================== 事务监控相关 SQL ===================== -->
+
+    <!-- 查询长时间运行的事务 -->
+    <select id="listLongRunningTransactions" resultType="map">
+        SELECT
+            trx_id,
+            trx_state,
+            trx_started,
+            TIMESTAMPDIFF(SECOND, trx_started, NOW()) as duration_seconds,
+            trx_mysql_thread_id,
+            p.USER,
+            p.HOST,
+            LEFT(p.INFO, 200) as query
+        FROM information_schema.INNODB_TRX t
+        LEFT JOIN information_schema.PROCESSLIST p ON t.trx_mysql_thread_id = p.ID
+        WHERE TIMESTAMPDIFF(SECOND, trx_started, NOW()) &gt; #{thresholdSeconds}
+        ORDER BY duration_seconds DESC
+    </select>
+
+    <!-- 查询等待元数据锁的连接 -->
+    <select id="listMetadataLockWaits" resultType="map">
+        SELECT
+            ID,
+            USER,
+            HOST,
+            COMMAND,
+            TIME as wait_time_seconds,
+            STATE,
+            LEFT(INFO, 200) as QUERY
+        FROM information_schema.PROCESSLIST
+        WHERE STATE = 'Waiting for table metadata lock'
+        ORDER BY TIME DESC
+    </select>
+
+    <!-- 统计长时间运行的事务数量 -->
+    <select id="countLongRunningTransactions" resultType="int">
+        SELECT COUNT(*) FROM information_schema.INNODB_TRX
+        WHERE TIMESTAMPDIFF(SECOND, trx_started, NOW()) &gt; #{thresholdSeconds}
+    </select>
+
+    <!-- 统计等待元数据锁的连接数量 -->
+    <select id="countMetadataLockWaits" resultType="int">
+        SELECT COUNT(*) FROM information_schema.PROCESSLIST
+        WHERE STATE = 'Waiting for table metadata lock'
+    </select>
+
+</mapper>
+
+

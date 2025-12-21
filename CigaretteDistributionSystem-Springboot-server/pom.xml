@@ -172,6 +172,17 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <testFailureIgnore>false</testFailureIgnore>
+                    <forkCount>1</forkCount>
+                    <reuseForks>false</reuseForks>
+                    <!-- 设置测试超时为60秒 -->
+                    <testTimeoutInSeconds>60</testTimeoutInSeconds>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

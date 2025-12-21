@@ -4,9 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.application.service.coordinator.BiWeeklyVisitBoostService;
 import org.example.application.service.coordinator.TagExtractionService;
-import org.example.domain.repository.TemporaryCustomerTableRepository;
+import org.example.domain.repository.FilterCustomerTableRepository;
 import org.example.domain.service.rule.BiWeeklyVisitBoostRule;
-import org.example.shared.constants.TableConstants;
 import org.example.shared.util.CombinationStrategyAnalyzer;
 import org.example.shared.util.OrderCycleMatrixCalculator;
 import org.example.domain.model.tag.TagFilterRule;
@@ -32,7 +31,7 @@ public class BiWeeklyVisitBoostServiceImpl implements BiWeeklyVisitBoostService 
 
     private static final BiWeeklyVisitBoostRule BOOST_RULE = new org.example.domain.service.rule.impl.BiWeeklyVisitBoostRuleImpl();
 
-    private final TemporaryCustomerTableRepository temporaryCustomerTableRepository;
+    private final FilterCustomerTableRepository filterCustomerTableRepository;
     private final TagExtractionService tagExtractionService;
     private final CombinationStrategyAnalyzer strategyAnalyzer;
     private final OrderCycleMatrixCalculator matrixCalculator;
@@ -89,16 +88,9 @@ public class BiWeeklyVisitBoostServiceImpl implements BiWeeklyVisitBoostService 
             return baseMatrix;
         }
 
-        String temporaryTable = TableConstants.TEMP_CUSTOMER_FILTER_PREFIX + year + "_" + month + "_" + weekSeq;
-        Long exists = temporaryCustomerTableRepository.tableExists(temporaryTable);
-        if (exists == null || exists == 0L) {
-            log.warn("两周一访上浮100%：临时表 {} 不存在，无法执行上浮", temporaryTable);
-            return baseMatrix;
-        }
-
-        Set<OrderCycleMatrixCalculator.OrderCycleType> boostTypes = detectBoostTypes(temporaryTable);
+        Set<OrderCycleMatrixCalculator.OrderCycleType> boostTypes = detectBoostTypes(year, month, weekSeq);
         if (boostTypes.isEmpty()) {
-            log.info("两周一访上浮100%：临时表 {} 中不存在单周/双周客户，跳过上浮", temporaryTable);
+            log.info("两周一访上浮100%：分区 {}-{}-{} 中不存在单周/双周客户，跳过上浮", year, month, weekSeq);
             return baseMatrix;
         }
 
@@ -118,7 +110,7 @@ public class BiWeeklyVisitBoostServiceImpl implements BiWeeklyVisitBoostService 
         
         for (OrderCycleMatrixCalculator.OrderCycleType type : boostTypes) {
             Map<String, BigDecimal[]> increments = matrixCalculator.calculateOrderCycleMatrix(
-                    strategy, temporaryTable, tagRules, type);
+                    strategy, year, month, weekSeq, tagRules, type);
             
             // 应用上浮规则：直接操作原始矩阵
             for (Map.Entry<String, BigDecimal[]> entry : increments.entrySet()) {
@@ -147,19 +139,15 @@ public class BiWeeklyVisitBoostServiceImpl implements BiWeeklyVisitBoostService 
 
 
     /**
-     * 从临时表扫描订单周期，判断是否存在单周/双周客户。
+     * 从分区表扫描订单周期，判断是否存在单周/双周客户。
      *
-     * @param tableName 临时表名（如："temp_customer_filter_2025_9_3"）
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
      * @return 检测到的周期类型集合，可能包含 OrderCycleType.SINGLE（单周）和/或 OrderCycleType.DOUBLE（双周）
-     * @example
-     * <pre>
-     *     Set<OrderCycleMatrixCalculator.OrderCycleType> types = detectBoostTypes("temp_customer_filter_2025_9_3");
-     *     // 如果临时表中存在"单周"订单周期，则 types 包含 SINGLE
-     *     // 如果临时表中存在"双周"订单周期，则 types 包含 DOUBLE
-     * </pre>
      */
-    private Set<OrderCycleMatrixCalculator.OrderCycleType> detectBoostTypes(String tableName) {
-        List<String> cycles = temporaryCustomerTableRepository.listOrderCycles(tableName);
+    private Set<OrderCycleMatrixCalculator.OrderCycleType> detectBoostTypes(Integer year, Integer month, Integer weekSeq) {
+        List<String> cycles = filterCustomerTableRepository.listOrderCyclesPartition(year, month, weekSeq);
         Set<OrderCycleMatrixCalculator.OrderCycleType> types = EnumSet.noneOf(OrderCycleMatrixCalculator.OrderCycleType.class);
         cycles.stream()
                 .filter(Objects::nonNull)

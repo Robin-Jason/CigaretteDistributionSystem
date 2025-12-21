@@ -60,10 +60,12 @@ public interface BaseCustomerInfoMapper extends BaseMapper<BaseCustomerInfoPO> {
      *
      * @param columns 列名顺序
      * @param row 行数据
+     * @param values 按列顺序的值列表（用于MyBatis动态绑定）
      * @return 影响行数
      */
     int insertRow(@Param("columns") List<String> columns,
-                  @Param("row") Map<String, Object> row);
+                  @Param("row") Map<String, Object> row,
+                  @Param("values") List<Object> values);
 
     /**
      * 诚信互助小组统计

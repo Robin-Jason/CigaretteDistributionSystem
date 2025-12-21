@@ -104,5 +104,21 @@ public class CigaretteDistributionInfoRepositoryImpl implements CigaretteDistrib
         log.debug("查询不重复投放组合: {}-{}-{}, 返回 {} 条记录", year, month, weekSeq, result.size());
         return result;
     }
+
+    /**
+     * 查询指定分区内“按价位段自选投放”卷烟的候选列表（含批发价）。
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @return 候选卷烟列表，每条至少包含 CIG_CODE、CIG_NAME、DELIVERY_AREA、DELIVERY_METHOD、DELIVERY_ETYPE、WHOLESALE_PRICE 等字段
+     */
+    @Override
+    public List<Map<String, Object>> findPriceBandCandidates(Integer year, Integer month, Integer weekSeq) {
+        partitionTableManager.ensurePartitionExists(TABLE_NAME, year, month, weekSeq);
+        List<Map<String, Object>> result = cigaretteDistributionInfoMapper.findPriceBandCandidates(year, month, weekSeq);
+        log.debug("查询价位段自选投放候选卷烟: {}-{}-{}, 返回 {} 条记录", year, month, weekSeq, result.size());
+        return result;
+    }
 }
 

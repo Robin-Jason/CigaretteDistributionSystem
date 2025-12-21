@@ -1,0 +1,57 @@
+price-bands:
+  price-bands:
+  # 1 段：批发价 >= 600
+  - code: 1
+    label: "第1段"
+    minInclusive: 600
+    maxExclusive: null
+
+  # 2 段：400 <= 批发价 < 600
+  - code: 2
+    label: "第2段"
+    minInclusive: 400
+    maxExclusive: 600
+
+  # 3 段：290 <= 批发价 < 400
+  - code: 3
+    label: "第3段"
+    minInclusive: 290
+    maxExclusive: 400
+
+  # 4 段：263 <= 批发价 < 290
+  - code: 4
+    label: "第4段"
+    minInclusive: 263
+    maxExclusive: 290
+
+  # 5 段：220 <= 批发价 < 263
+  - code: 5
+    label: "第5段"
+    minInclusive: 220
+    maxExclusive: 263
+
+  # 6 段：180 <= 批发价 < 220
+  - code: 6
+    label: "第6段"
+    minInclusive: 180
+    maxExclusive: 220
+
+  # 7 段：158 <= 批发价 < 180
+  - code: 7
+    label: "第7段"
+    minInclusive: 158
+    maxExclusive: 180
+
+  # 8 段：130 <= 批发价 < 158
+  - code: 8
+    label: "第8段"
+    minInclusive: 130
+    maxExclusive: 158
+
+  # 9 段：109 <= 批发价 < 130
+  - code: 9
+    label: "第9段"
+    minInclusive: 109
+    maxExclusive: 130
+
+

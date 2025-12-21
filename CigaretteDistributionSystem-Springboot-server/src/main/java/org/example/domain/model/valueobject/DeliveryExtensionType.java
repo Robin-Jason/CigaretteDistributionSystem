@@ -23,7 +23,7 @@ public enum DeliveryExtensionType {
     BUSINESS_FORMAT("业态", aliasSet("业态", "经营业态", "业态类型", "档位+业态")),
     MARKET_DEPARTMENT("市场部", aliasSet("市场部", "市场部门", "档位+市场部")),
     BUSINESS_DISTRICT("商圈类型", aliasSet("商圈类型", "商圈", "商圈类别", "档位+商圈类型")),
-    INTEGRITY_GROUP("诚信自律小组", aliasSet("诚信自律小组", "诚信互助小组", "档位+诚信自律小组")),
+    INTEGRITY_GROUP("诚信互助小组", aliasSet("诚信互助小组", "档位+诚信互助小组")),
     CREDIT_LEVEL("信用等级", aliasSet("信用等级", "客户信用等级", "档位+信用等级")),
     UNKNOWN("UNKNOWN", aliasSet("UNKNOWN"));
 

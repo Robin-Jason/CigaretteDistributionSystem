@@ -43,11 +43,6 @@ public final class TableConstants {
     public static final String INTEGRITY_GROUP_MAPPING = "integrity_group_code_mapping";
 
     /**
-     * 临时客户过滤表名前缀
-     */
-    public static final String TEMP_CUSTOMER_FILTER_PREFIX = "temp_customer_filter_";
-
-    /**
      * 基础客户信息表必填字段
      */
     public static final String MANDATORY_CUSTOMER_COLUMN = "CUST_CODE";

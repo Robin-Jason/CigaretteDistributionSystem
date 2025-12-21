@@ -77,5 +77,30 @@
         WHERE YEAR = #{year} AND MONTH = #{month} AND WEEK_SEQ = #{weekSeq}
     </select>
 
+    <!-- 查询指定分区内"按价位段自选投放"卷烟的候选列表（含批发价） -->
+    <!-- 注意：按价位段自选投放的卷烟投放区域应该都是"全市"，每条卷烟只返回一条记录 -->
+    <!-- 如果同一条卷烟有多条记录（不同DELIVERY_ETYPE、TAG等），只取第一条 -->
+    <select id="findPriceBandCandidates" resultType="java.util.LinkedHashMap">
+        SELECT
+            i.YEAR,
+            i.MONTH,
+            i.WEEK_SEQ,
+            i.CIG_CODE,
+            i.CIG_NAME,
+            '全市' AS DELIVERY_AREA,
+            i.DELIVERY_METHOD,
+            NULL AS DELIVERY_ETYPE,
+            MAX(i.ADV) AS ADV,
+            p.WHOLESALE_PRICE
+        FROM `cigarette_distribution_info` i
+        JOIN `base_cigarette_price` p
+          ON i.CIG_CODE = p.CIG_CODE
+        WHERE i.YEAR = #{year}
+          AND i.MONTH = #{month}
+          AND i.WEEK_SEQ = #{weekSeq}
+          AND i.DELIVERY_METHOD = '按价位段自选投放'
+        GROUP BY i.CIG_CODE, i.CIG_NAME, i.YEAR, i.MONTH, i.WEEK_SEQ, i.DELIVERY_METHOD, p.WHOLESALE_PRICE
+    </select>
+
 </mapper>
 

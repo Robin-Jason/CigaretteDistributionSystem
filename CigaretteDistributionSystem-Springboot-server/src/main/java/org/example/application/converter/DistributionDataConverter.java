@@ -147,18 +147,36 @@ public final class DistributionDataConverter {
      * </pre>
      */
     public static BigDecimal[] extractCustomerCounts(Map<String, Object> row) {
-        BigDecimal[] customerCounts = new BigDecimal[GradeConstants.GRADE_NAMES.length];
-        for (int i = 0; i < GradeConstants.GRADE_NAMES.length; i++) {
-            Object value = getObjectIgnoreCase(row, GradeConstants.GRADE_NAMES[i]);
-            if (value == null) {
-                customerCounts[i] = BigDecimal.ZERO;
-            } else if (value instanceof BigDecimal) {
-                customerCounts[i] = (BigDecimal) value;
-            } else {
-                customerCounts[i] = new BigDecimal(value.toString());
-            }
+        return org.example.shared.util.GradeExtractor.extractFromMap(row);
+    }
+
+    /**
+     * 从PO实体提取30个档位值（D30-D1）。
+     * <p>档位数组索引对应关系：索引0=D30，索引29=D1。</p>
+     *
+     * @param record PO实体对象
+     * @return 30个档位的BigDecimal数组
+     * @example
+     * <pre>
+     *     CigaretteDistributionPredictionPO record = ...;
+     *     BigDecimal[] grades = DistributionDataConverter.extractGradesFromPO(record);
+     *     // grades[0] = record.getD30(), grades[1] = record.getD29(), ...
+     * </pre>
+     */
+    public static BigDecimal[] extractGradesFromPO(org.example.infrastructure.persistence.po.CigaretteDistributionPredictionPO record) {
+        if (record == null) {
+            BigDecimal[] grades = new BigDecimal[GradeConstants.GRADE_COUNT];
+            java.util.Arrays.fill(grades, java.math.BigDecimal.ZERO);
+            return grades;
         }
-        return customerCounts;
+        return new BigDecimal[]{
+                record.getD30(), record.getD29(), record.getD28(), record.getD27(), record.getD26(),
+                record.getD25(), record.getD24(), record.getD23(), record.getD22(), record.getD21(),
+                record.getD20(), record.getD19(), record.getD18(), record.getD17(), record.getD16(),
+                record.getD15(), record.getD14(), record.getD13(), record.getD12(), record.getD11(),
+                record.getD10(), record.getD9(), record.getD8(), record.getD7(), record.getD6(),
+                record.getD5(), record.getD4(), record.getD3(), record.getD2(), record.getD1()
+        };
     }
 
     /**

@@ -101,6 +101,20 @@ public interface CigaretteDistributionPredictionPriceMapper {
                     @Param("weekSeq") Integer weekSeq,
                     @Param("cigCode") String cigCode,
                     @Param("cigName") String cigName);
+
+    /**
+     * 按投放方式删除指定分区的记录
+     *
+     * @param year           年
+     * @param month          月
+     * @param weekSeq        周序
+     * @param deliveryMethod 投放方式
+     * @return 删除行数
+     */
+    int deleteByDeliveryMethod(@Param("year") Integer year,
+                               @Param("month") Integer month,
+                               @Param("weekSeq") Integer weekSeq,
+                               @Param("deliveryMethod") String deliveryMethod);
 }
 
 

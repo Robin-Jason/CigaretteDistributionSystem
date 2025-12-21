@@ -1,8 +1,8 @@
 package org.example.shared.util;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.example.infrastructure.persistence.mapper.AdminMapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,11 +24,10 @@ import java.util.List;
 @Component
 public class PartitionTableManager {
     
-    private final JdbcTemplate jdbcTemplate;
+    private final AdminMapper adminMapper;
     
-    
-    public PartitionTableManager(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    public PartitionTableManager(AdminMapper adminMapper) {
+        this.adminMapper = adminMapper;
     }
     
     /**
@@ -124,7 +123,7 @@ public class PartitionTableManager {
             tableName, sourcePartition, partitionName, nextPartitionKey);
         
         try {
-            jdbcTemplate.execute(sql);
+            adminMapper.executeSql(sql);
             log.info("创建分区成功: {}.{} (值范围: {} 到 {})", tableName, partitionName, currentPartitionKey, nextPartitionKey);
         } catch (Exception e) {
             log.error("创建分区失败: {}.{}", tableName, partitionName, e);
@@ -139,21 +138,11 @@ public class PartitionTableManager {
      * @return 最大分区值，如果没有分区则返回null
      */
     private Integer getMaxPartitionValue(String tableName) {
-        String sql = "SELECT PARTITION_DESCRIPTION FROM information_schema.PARTITIONS " +
-                    "WHERE TABLE_SCHEMA = DATABASE() " +
-                    "AND TABLE_NAME = ? " +
-                    "AND PARTITION_NAME != 'p_future' " +
-                    "AND PARTITION_DESCRIPTION IS NOT NULL " +
-                    "AND PARTITION_DESCRIPTION != 'MAXVALUE' " +
-                    "ORDER BY CAST(PARTITION_DESCRIPTION AS UNSIGNED) DESC " +
-                    "LIMIT 1";
-        
         try {
-            List<String> results = jdbcTemplate.queryForList(sql, String.class, tableName);
-            if (results.isEmpty()) {
+            String maxValueStr = adminMapper.getMaxPartitionDescription(tableName);
+            if (maxValueStr == null) {
                 return null;
             }
-            String maxValueStr = results.get(0);
             return Integer.parseInt(maxValueStr);
         } catch (Exception e) {
             log.warn("查询最大分区值失败: {}", tableName, e);
@@ -193,12 +182,7 @@ public class PartitionTableManager {
      * @return true如果分区存在
      */
     public boolean partitionExists(String tableName, String partitionName) {
-        String sql = "SELECT COUNT(*) FROM information_schema.PARTITIONS " +
-                    "WHERE TABLE_SCHEMA = DATABASE() " +
-                    "AND TABLE_NAME = ? " +
-                    "AND PARTITION_NAME = ?";
-        
-        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, tableName, partitionName);
+        Integer count = adminMapper.countPartition(tableName, partitionName);
         return count != null && count > 0;
     }
     
@@ -221,7 +205,7 @@ public class PartitionTableManager {
         
         String sql = String.format("ALTER TABLE `%s` TRUNCATE PARTITION %s", tableName, partitionName);
         try {
-            jdbcTemplate.execute(sql);
+            adminMapper.executeSql(sql);
             log.info("截断分区成功：{}.{}", tableName, partitionName);
             return true;
         } catch (Exception e) {
@@ -237,13 +221,7 @@ public class PartitionTableManager {
      * @return 分区名列表
      */
     public List<String> listPartitions(String tableName) {
-        String sql = "SELECT PARTITION_NAME FROM information_schema.PARTITIONS " +
-                    "WHERE TABLE_SCHEMA = DATABASE() " +
-                    "AND TABLE_NAME = ? " +
-                    "AND PARTITION_NAME IS NOT NULL " +
-                    "ORDER BY PARTITION_ORDINAL_POSITION";
-        
-        return jdbcTemplate.queryForList(sql, String.class, tableName);
+        return adminMapper.listPartitions(tableName);
     }
     
     /**
@@ -277,7 +255,7 @@ public class PartitionTableManager {
                 String sql = String.format(
                     "ALTER TABLE `%s` DROP PARTITION %s",
                     tableName, partitionName);
-                jdbcTemplate.execute(sql);
+                adminMapper.executeSql(sql);
                 log.info("删除分区成功: {}.{}", tableName, partitionName);
             } catch (Exception e) {
                 log.error("删除分区失败: {}.{}", tableName, partitionName, e);
@@ -320,7 +298,7 @@ public class PartitionTableManager {
                 String sql = String.format(
                     "ALTER TABLE `%s` DROP PARTITION %s",
                     tableName, partitionName);
-                jdbcTemplate.execute(sql);
+                adminMapper.executeSql(sql);
                 log.info("删除分区成功: {}.{}", tableName, partitionName);
                 droppedCount++;
             } catch (Exception e) {

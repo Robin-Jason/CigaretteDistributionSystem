@@ -5,6 +5,7 @@ import org.example.domain.repository.BaseCustomerInfoRepository;
 import org.example.infrastructure.persistence.mapper.BaseCustomerInfoMapper;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -55,7 +56,14 @@ public class BaseCustomerInfoRepositoryImpl implements BaseCustomerInfoRepositor
      */
     @Override
     public int insertRow(List<String> columns, Map<String, Object> row) {
-        return baseCustomerInfoMapper.insertRow(columns, row);
+        // 提取按列顺序的值列表，解决MyBatis无法解析动态Map key的问题
+        List<Object> values = new ArrayList<>();
+        for (String col : columns) {
+            if (col != null && !col.isEmpty() && !"ID".equalsIgnoreCase(col)) {
+                values.add(row.get(col));
+            }
+        }
+        return baseCustomerInfoMapper.insertRow(columns, row, values);
     }
 
     /**
@@ -68,4 +76,3 @@ public class BaseCustomerInfoRepositoryImpl implements BaseCustomerInfoRepositor
         return baseCustomerInfoMapper.selectGroupNameStatistics();
     }
 }
-

@@ -23,6 +23,17 @@ public interface CigaretteDistributionPredictionPriceRepository {
     int deleteByCig(Integer year, Integer month, Integer weekSeq, String cigCode, String cigName);
 
     /**
+     * 按投放方式删除指定分区的记录
+     *
+     * @param year          年份
+     * @param month         月份
+     * @param weekSeq       周序号
+     * @param deliveryMethod 投放方式
+     * @return 删除行数
+     */
+    int deleteByDeliveryMethod(Integer year, Integer month, Integer weekSeq, String deliveryMethod);
+
+    /**
      * 查询指定年月周的所有预测数据（价格分区表）
      *
      * @param year    年份

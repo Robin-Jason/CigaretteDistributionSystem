@@ -12,11 +12,12 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 策略编排器（策略执行入口）。
@@ -160,6 +161,8 @@ public class StrategyOrchestrator {
 
         // 2. 解析待投放区域列表
         List<String> targetAreas = parseDeliveryAreas(deliveryArea);
+        log.debug("【区域匹配】解析后的目标区域列表: {}", targetAreas);
+        
         if (targetAreas.isEmpty()) {
             // 未指定区域时，默认使用全集
             List<RegionCustomerMatrix.Row> allRows = new ArrayList<>();
@@ -169,11 +172,15 @@ public class StrategyOrchestrator {
                 allRows.add(new RegionCustomerMatrix.Row(region, grades));
             }
             sortRowsByTotalDesc(allRows);
+            log.debug("【区域匹配】未指定区域，使用全集，共 {} 个区域", allRows.size());
             return new RegionCustomerMatrix(allRows);
         }
 
         // 3. 使用KMP在区域全集中做子串匹配，构造子矩阵
         Map<String, RegionCustomerMatrix.Row> rowMap = new LinkedHashMap<>();
+        Set<String> matchedRegions = new HashSet<>();
+        Set<String> unmatchedTargetAreas = new HashSet<>(targetAreas);
+        
         for (Map<String, Object> stat : allStats) {
             String regionName = getString(stat, "REGION");
             if (regionName == null || regionName.trim().isEmpty()) {
@@ -186,9 +193,19 @@ public class StrategyOrchestrator {
                 if (!rowMap.containsKey(regionTrimmed)) {
                     BigDecimal[] grades = extractGrades(stat);
                     rowMap.put(regionTrimmed, new RegionCustomerMatrix.Row(regionTrimmed, grades));
+                    matchedRegions.add(regionTrimmed);
+                    // 从未匹配列表中移除（可能匹配多个targetArea）
+                    unmatchedTargetAreas.removeAll(matched);
                 }
             }
         }
+
+        // 记录匹配结果
+        if (!unmatchedTargetAreas.isEmpty()) {
+            log.warn("【区域匹配失败】以下目标区域在region_customer_statistics中未找到匹配: {}", unmatchedTargetAreas);
+        }
+        log.debug("【区域匹配】目标区域数={}, 匹配成功数={}, 匹配失败数={}, 匹配成功的区域: {}", 
+                targetAreas.size(), matchedRegions.size(), unmatchedTargetAreas.size(), matchedRegions);
 
         List<RegionCustomerMatrix.Row> rows = new ArrayList<>(rowMap.values());
         sortRowsByTotalDesc(rows);
@@ -236,35 +253,13 @@ public class StrategyOrchestrator {
     }
 
     private BigDecimal[] extractGrades(Map<String, Object> row) {
-        BigDecimal[] grades = new BigDecimal[30];
-        Arrays.fill(grades, BigDecimal.ZERO);
-        for (int i = 0; i < 30; i++) {
-            String column = "D" + (30 - i);
-            Object value = row.get(column);
-            if (value instanceof BigDecimal) {
-                grades[i] = (BigDecimal) value;
-            } else if (value instanceof Number) {
-                grades[i] = BigDecimal.valueOf(((Number) value).doubleValue());
-            }
-        }
-        return grades;
+        return org.example.shared.util.GradeExtractor.extractFromMap(row);
     }
 
     private String getString(Map<String, Object> map, String key) {
-        if (map == null) {
-            return null;
-        }
-        Object value = map.get(key);
-        if (value == null) {
-            for (Map.Entry<String, Object> entry : map.entrySet()) {
-                if (entry.getKey().equalsIgnoreCase(key)) {
-                    value = entry.getValue();
-                    break;
-                }
-            }
-        }
-        return value != null ? value.toString() : null;
+        return org.example.shared.util.MapValueExtractor.getStringValue(map, key);
     }
 
 }
+
 

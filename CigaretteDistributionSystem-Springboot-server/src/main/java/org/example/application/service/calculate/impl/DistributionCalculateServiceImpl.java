@@ -8,17 +8,21 @@ import org.example.application.dto.TotalActualDeliveryResponseDto;
 import org.example.infrastructure.persistence.po.CigaretteDistributionInfoPO;
 import org.example.infrastructure.persistence.po.CigaretteDistributionPredictionPO;
 import org.example.application.service.calculate.DistributionCalculateService;
+import org.example.application.service.calculate.PriceBandAllocationService;
 import org.example.application.service.query.PartitionPredictionQueryService;
+import org.example.application.service.writeback.DistributionWriteBackService;
 import org.example.domain.repository.CigaretteDistributionInfoRepository;
 import org.example.domain.repository.RegionCustomerStatisticsRepository;
 import org.example.application.converter.DistributionDataConverter;
 import org.example.application.orchestrator.allocation.AllocationCalculationResult;
 import org.example.application.orchestrator.allocation.DistributionAllocationOrchestrator;
+import org.example.shared.util.ActualDeliveryCalculator;
 import org.example.shared.util.PartitionTableManager;
 import org.example.domain.event.DistributionPlanGenerationStartedEvent;
 import org.example.domain.event.DistributionPlanGenerationCompletedEvent;
 import org.example.domain.event.ExistingDataDeletedEvent;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -51,10 +55,14 @@ public class DistributionCalculateServiceImpl implements DistributionCalculateSe
     private PartitionPredictionQueryService partitionPredictionQueryService;
 
     @Autowired
+    @Qualifier("standardDistributionWriteBackServiceImpl")
     private DistributionWriteBackService distributionWriteBackService;
 
     @Autowired
     private DistributionAllocationOrchestrator distributionAllocationOrchestrator;
+
+    @Autowired
+    private PriceBandAllocationService priceBandAllocationService;
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
@@ -96,14 +104,8 @@ public class DistributionCalculateServiceImpl implements DistributionCalculateSe
                 throw new RuntimeException(String.format("无法获取区域 '%s' 的客户数档位数据", target));
             }
             
-            BigDecimal actualDelivery = BigDecimal.ZERO;
-            
-            // 严格按照公式计算：∑（档位分配值 × 对应区域客户数档位值）
-            for (int i = 0; i < 30; i++) {
-                BigDecimal allocation = allocationRow[i] != null ? allocationRow[i] : BigDecimal.ZERO;
-                BigDecimal customerCount = customerCounts[i] != null ? customerCounts[i] : BigDecimal.ZERO;
-                actualDelivery = actualDelivery.add(allocation.multiply(customerCount));
-            }
+            // 使用公共工具类计算实际投放量
+            BigDecimal actualDelivery = ActualDeliveryCalculator.calculateFixed30(allocationRow, customerCounts);
             
             log.debug("区域 '{}' 实际投放量计算完成: {}", target, actualDelivery);
             return actualDelivery;
@@ -301,11 +303,30 @@ public class DistributionCalculateServiceImpl implements DistributionCalculateSe
                         .orderByAsc("CIG_CODE", "CIG_NAME");
                 List<Map<String, Object>> advDataList = cigaretteDistributionInfoRepository.selectMaps(infoQuery);
                 
+                // 先处理价位段自选投放的卷烟（批量处理）
+                try {
+                    log.info("开始处理价位段自选投放卷烟: {}-{}-{}", request.getYear(), request.getMonth(), request.getWeekSeq());
+                    priceBandAllocationService.allocateForPriceBand(request.getYear(), request.getMonth(), request.getWeekSeq());
+                    log.info("价位段自选投放卷烟处理完成: {}-{}-{}", request.getYear(), request.getMonth(), request.getWeekSeq());
+                } catch (Exception e) {
+                    log.error("价位段自选投放卷烟处理失败: {}-{}-{}", request.getYear(), request.getMonth(), request.getWeekSeq(), e);
+                    // 不中断整个流程，继续处理其他卷烟
+                }
+                
+                // 过滤掉已处理的价位段自选投放卷烟
+                List<Map<String, Object>> filteredAdvDataList = new ArrayList<>();
+                for (Map<String, Object> advData : advDataList) {
+                    String deliveryMethod = DistributionDataConverter.getStringIgnoreCase(advData, "delivery_method");
+                    if (!"按价位段自选投放".equals(deliveryMethod)) {
+                        filteredAdvDataList.add(advData);
+                    }
+                }
+                
                 int successCount = 0;
                 int totalCount = 0;
                 
-                // 处理每个卷烟
-                for (Map<String, Object> advData : advDataList) {
+                // 处理其他类型的卷烟（按档位投放、按档位扩展投放等）
+                for (Map<String, Object> advData : filteredAdvDataList) {
                     totalCount++;
                     // 初始化结果对象
                     Map<String, Object> cigResult = new HashMap<>();

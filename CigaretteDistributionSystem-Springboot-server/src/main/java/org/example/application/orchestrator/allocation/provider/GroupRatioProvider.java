@@ -15,7 +15,7 @@ import java.util.Map;
  * <p>典型扩展：</p>
  * <ul>
  *     <li>市场类型：默认城网:农网 = 4:6，或使用用户传入的比例</li>
- *     <li>诚信自律小组：根据客户数占比自动计算比例</li>
+ *     <li>诚信互助小组：根据客户数占比自动计算比例</li>
  *     <li>其他扩展类型：可后续扩展</li>
  * </ul>
  *
@@ -26,7 +26,7 @@ public interface GroupRatioProvider {
     /**
      * 判断该提供者是否支持指定的扩展类型
      *
-     * @param deliveryEtype 扩展投放类型，如"档位+市场类型"、"档位+诚信自律小组"
+     * @param deliveryEtype 扩展投放类型，如"档位+市场类型"、"档位+诚信互助小组"
      * @return 如果支持则返回true
      *
      * @example supports("档位+市场类型") == true

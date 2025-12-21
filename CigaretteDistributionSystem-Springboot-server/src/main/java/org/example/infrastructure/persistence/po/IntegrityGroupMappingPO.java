@@ -1,6 +1,7 @@
 package org.example.infrastructure.persistence.po;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -31,5 +32,8 @@ public class IntegrityGroupMappingPO {
     private BigDecimal customerCount;
 
     private Integer sortOrder;
+
+    @TableField("updated_at")
+    private java.time.LocalDateTime updatedAt;
 }
 

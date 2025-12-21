@@ -8,6 +8,7 @@ import org.example.infrastructure.persistence.mapper.RegionCustomerStatisticsMap
 import org.example.shared.util.PartitionTableManager;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -74,6 +75,26 @@ public class RegionCustomerStatisticsRepositoryImpl implements RegionCustomerSta
         // 分批处理
         int totalInserted = 0;
         int totalSize = list.size();
+        
+        // 调试：检查"全市"区域记录在写入前的数据
+        for (RegionCustomerRecord record : list) {
+            if ("全市".equals(record.getRegion())) {
+                BigDecimal[] grades = record.getGrades();
+                BigDecimal sumGrades = BigDecimal.ZERO;
+                for (int i = 0; i < grades.length; i++) {
+                    if (grades[i] != null) {
+                        sumGrades = sumGrades.add(grades[i]);
+                    }
+                }
+                log.warn("【写入前检查】区域={}, TOTAL={}, D30-D1之和={}, 差异={}", 
+                        record.getRegion(), record.getTotal(), sumGrades, record.getTotal().subtract(sumGrades));
+                // 打印前10个档位的值
+                for (int i = 0; i < Math.min(10, grades.length); i++) {
+                    log.warn("  D{} (索引{}): {}", 30-i, i, grades[i]);
+                }
+            }
+        }
+        
         for (int offset = 0; offset < totalSize; offset += BATCH_SIZE) {
             int endIndex = Math.min(offset + BATCH_SIZE, totalSize);
             List<RegionCustomerRecord> batch = list.subList(offset, endIndex);

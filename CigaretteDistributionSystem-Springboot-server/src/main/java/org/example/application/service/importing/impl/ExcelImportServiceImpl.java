@@ -3,13 +3,14 @@ package org.example.application.service.importing.impl;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.example.application.dto.DataImportRequestDto;
+import org.example.application.service.importing.CigaretteImportValidator;
 import org.example.application.service.importing.ExcelImportService;
 import org.example.shared.constants.TableConstants;
 import org.example.shared.helper.BaseCustomerTableManager;
+import org.example.shared.helper.CigaretteInfoWriter;
 import org.example.shared.helper.ExcelParseHelper;
 import org.example.shared.helper.ImportValidationHelper;
 import org.example.shared.helper.IntegrityGroupMappingService;
-import org.example.shared.helper.CigaretteInfoWriter;
 import org.example.domain.event.DataImportStartedEvent;
 import org.example.domain.event.DataImportCompletedEvent;
 import org.example.domain.event.DataImportFailedEvent;
@@ -39,6 +40,7 @@ public class ExcelImportServiceImpl implements ExcelImportService {
     private final CigaretteInfoWriter cigaretteInfoWriter;
     private final IntegrityGroupMappingService integrityGroupMappingService;
     private final ApplicationEventPublisher eventPublisher;
+    private final CigaretteImportValidator cigaretteImportValidator;
 
     private static final Map<String, String> BASE_CUSTOMER_COLUMN_DEFINITIONS = new LinkedHashMap<>();
 
@@ -59,8 +61,6 @@ public class ExcelImportServiceImpl implements ExcelImportService {
         BASE_CUSTOMER_COLUMN_DEFINITIONS.put("IS_MUTUAL_AID_GROUP", "varchar(20) DEFAULT NULL COMMENT '是否加入诚信互助小组'");
         BASE_CUSTOMER_COLUMN_DEFINITIONS.put("GROUP_NAME", "varchar(100) DEFAULT NULL COMMENT '小组名称'");
         BASE_CUSTOMER_COLUMN_DEFINITIONS.put("QUALITY_DATA_SHARE", "varchar(20) DEFAULT NULL COMMENT '优质数据共享客户'");
-        BASE_CUSTOMER_COLUMN_DEFINITIONS.put("PREMIUM_CUSTOMER", "varchar(20) DEFAULT NULL COMMENT '优质客户'");
-        BASE_CUSTOMER_COLUMN_DEFINITIONS.put("CRITICAL_TIME_AREA", "varchar(20) DEFAULT NULL COMMENT '重点时段+地段'");
     }
 
 
@@ -90,12 +90,15 @@ public class ExcelImportServiceImpl implements ExcelImportService {
                 return result;
             }
             
-            // 4. 验证数据结构
+            // 3. 验证数据结构（必需列）
             if (!validateCigaretteInfoStructure(excelData.get(0))) {
                 result.put("success", false);
                 result.put("message", "Excel文件结构不符合要求，请检查列名是否与cigarette_distribution_info表结构完全一致");
                 return result;
             }
+
+            // 4. 业务合法性校验（全市占比 + 货源属性规则）
+            cigaretteImportValidator.validate(excelData);
             
             // 5. 插入数据到分区表
             int insertedCount = cigaretteInfoWriter.writeToPartition(
@@ -109,6 +112,11 @@ public class ExcelImportServiceImpl implements ExcelImportService {
             log.info("卷烟投放基础信息导入完成: {}-{}-{}, 插入记录数: {}", 
                     request.getYear(), request.getMonth(), request.getWeekSeq(), insertedCount);
             
+        } catch (IllegalArgumentException e) {
+            // 业务合法性校验失败（全市占比 / 货源属性规则等）
+            log.warn("卷烟投放基础信息导入校验未通过: {}", e.getMessage());
+            result.put("success", false);
+            result.put("message", "导入校验失败: " + e.getMessage());
         } catch (Exception e) {
             log.error("导入卷烟投放基础信息失败", e);
             result.put("success", false);
@@ -159,8 +167,13 @@ public class ExcelImportServiceImpl implements ExcelImportService {
                     excelData.getColumns(),
                     excelData.getRows(),
                     TableConstants.MANDATORY_CUSTOMER_COLUMN);
+            
+            // 重要：必须在导入 base_customer_info 后立即同步生成 integrity_group_code_mapping
+            // 确保两个表保持同步，这是使用诚信互助小组扩展类型的前提条件
+            log.info("开始同步生成 integrity_group_code_mapping 表...");
             integrityGroupMappingService.refreshFromBaseCustomer();
             List<Map<String, Object>> integrityGroupMappings = integrityGroupMappingService.fetchAll();
+            log.info("integrity_group_code_mapping 表同步完成，共 {} 条记录", integrityGroupMappings.size());
             
             result.put("success", true);
             result.put("message", "导入成功");
@@ -202,6 +215,7 @@ public class ExcelImportServiceImpl implements ExcelImportService {
         }
         return valid;
     }
+
 
 
     /**

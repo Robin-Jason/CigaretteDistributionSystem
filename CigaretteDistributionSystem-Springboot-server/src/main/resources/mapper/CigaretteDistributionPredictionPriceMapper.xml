@@ -149,5 +149,14 @@
           AND CIG_NAME = #{cigName}
     </delete>
 
+    <!-- 按投放方式删除指定分区的记录 -->
+    <delete id="deleteByDeliveryMethod">
+        DELETE FROM `cigarette_distribution_prediction_price`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND DELIVERY_METHOD = #{deliveryMethod}
+    </delete>
+
 </mapper>
 

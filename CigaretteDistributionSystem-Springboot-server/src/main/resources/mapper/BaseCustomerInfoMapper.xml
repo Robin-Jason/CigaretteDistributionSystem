@@ -11,6 +11,29 @@
     <!-- Map 结果集：保持列顺序，便于动态列处理 -->
     <resultMap id="mapResult" type="java.util.LinkedHashMap"/>
 
+    <!-- BaseCustomerInfoPO 结果映射，支持DYNAMIC_TAGS JSON字段的TypeHandler -->
+    <resultMap id="baseCustomerInfoResultMap" type="org.example.infrastructure.persistence.po.BaseCustomerInfoPO">
+        <id property="id" column="ID"/>
+        <result property="custCode" column="CUST_CODE"/>
+        <result property="custId" column="CUST_ID"/>
+        <result property="grade" column="GRADE"/>
+        <result property="orderCycle" column="ORDER_CYCLE"/>
+        <result property="creditLevel" column="CREDIT_LEVEL"/>
+        <result property="marketType" column="MARKET_TYPE"/>
+        <result property="classificationCode" column="CLASSIFICATION_CODE"/>
+        <result property="custFormat" column="CUST_FORMAT"/>
+        <result property="businessDistrictType" column="BUSINESS_DISTRICT_TYPE"/>
+        <result property="companyBranch" column="COMPANY_BRANCH"/>
+        <result property="companyDistrict" column="COMPANY_DISTRICT"/>
+        <result property="marketDepartment" column="MARKET_DEPARTMENT"/>
+        <result property="businessStatus" column="BUSINESS_STATUS"/>
+        <result property="isMutualAidGroup" column="IS_MUTUAL_AID_GROUP"/>
+        <result property="groupName" column="GROUP_NAME"/>
+        <result property="qualityDataShare" column="QUALITY_DATA_SHARE"/>
+        <result property="dynamicTags" column="DYNAMIC_TAGS" 
+                typeHandler="org.example.infrastructure.persistence.typehandler.JsonMapTypeHandler"/>
+    </resultMap>
+
     <select id="selectAll" resultMap="mapResult">
         SELECT * FROM `base_customer_info`
     </select>
@@ -71,10 +94,15 @@
         </trim>
         VALUES
         <trim prefix="(" suffix=")" suffixOverrides=",">
-            <foreach collection="columns" item="col" separator=",">
-                <if test="col != null and col != '' and col.toUpperCase() != 'ID'">
-                    #{row[col]}
-                </if>
+            <foreach collection="values" item="val" separator=",">
+                <choose>
+                    <when test="val != null">
+                        #{val, jdbcType=VARCHAR}
+                    </when>
+                    <otherwise>
+                        NULL
+                    </otherwise>
+                </choose>
             </foreach>
         </trim>
     </insert>

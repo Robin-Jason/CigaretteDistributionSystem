@@ -84,16 +84,41 @@ public final class MapValueExtractor {
      * </pre>
      */
     public static String getStringValue(Map<String, Object> map, String key) {
+        Object value = getObjectIgnoreCase(map, key);
+        return value != null ? value.toString().trim() : null;
+    }
+
+    /**
+     * 从Map中获取Object类型的值（大小写不敏感）。
+     * <p>
+     * 支持大小写不敏感的键匹配，返回原始对象值。
+     * </p>
+     *
+     * @param map Map对象（通常是从数据库查询返回的结果Map）
+     * @param key 键名（大小写不敏感）
+     * @return 对象值，如果键不存在则返回 null
+     * @example
+     * <pre>
+     *     Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();
+     *     map.put("CIG_CODE", "42020181");
+     *     Object code = MapValueExtractor.getObjectIgnoreCase(map, "cig_code");
+     *     // 返回: "42020181"（大小写不敏感）
+     * </pre>
+     */
+    public static Object getObjectIgnoreCase(Map<String, Object> map, String key) {
+        if (map == null || key == null) {
+            return null;
+        }
         Object value = map.get(key);
-        if (value == null) {
+        if (value != null) {
+            return value;
+        }
             for (Map.Entry<String, Object> entry : map.entrySet()) {
-                if (entry.getKey().equalsIgnoreCase(key)) {
-                    value = entry.getValue();
-                    break;
-                }
+            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(key)) {
+                return entry.getValue();
             }
         }
-        return value != null ? value.toString().trim() : null;
+        return null;
     }
 }
 

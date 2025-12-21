@@ -13,9 +13,8 @@ public interface RegionCustomerStatisticsBuildService {
      * @param year    年份
      * @param month   月份
      * @param weekSeq 周序号
-     * @param temporaryTableName 临时表名
      * @return 构建结果
      */
-    Map<String, Object> buildRegionCustomerStatistics(Integer year, Integer month, Integer weekSeq, String temporaryTableName);
+    Map<String, Object> buildRegionCustomerStatistics(Integer year, Integer month, Integer weekSeq);
 }
 

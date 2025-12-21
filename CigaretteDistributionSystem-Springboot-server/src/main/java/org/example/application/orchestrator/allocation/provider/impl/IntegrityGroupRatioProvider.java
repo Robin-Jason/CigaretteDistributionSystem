@@ -10,10 +10,10 @@ import java.math.RoundingMode;
 import java.util.*;
 
 /**
- * 诚信自律小组比例分配提供者
+ * 诚信互助小组比例分配提供者
  * <p>
  * 规则：根据客户数占比为每个区域拆分预投放量
- * 即：每个诚信自律小组的分配量 = 总预投放量 × (该小组客户数 / 所有小组客户数总和)
+ * 即：每个诚信互助小组的分配量 = 总预投放量 × (该小组客户数 / 所有小组客户数总和)
  *
  * @author Robin
  */
@@ -21,7 +21,7 @@ import java.util.*;
 @Component
 public class IntegrityGroupRatioProvider implements GroupRatioProvider {
 
-    private static final String INTEGRITY_GROUP_EXTENSION = "档位+诚信自律小组";
+    private static final String INTEGRITY_GROUP_EXTENSION = "档位+诚信互助小组";
 
     @Override
     public boolean supports(String deliveryEtype) {
@@ -63,7 +63,7 @@ public class IntegrityGroupRatioProvider implements GroupRatioProvider {
 
         // 如果总客户数为0，无法计算比例，返回空Map（退化为无比例参数算法）
         if (totalCustomers.compareTo(BigDecimal.ZERO) <= 0) {
-            log.warn("诚信自律小组：所有区域客户数总和为0，无法计算比例，退化为无比例参数算法");
+            log.warn("诚信互助小组：所有区域客户数总和为0，无法计算比例，退化为无比例参数算法");
             return Collections.emptyMap();
         }
 
@@ -75,7 +75,7 @@ public class IntegrityGroupRatioProvider implements GroupRatioProvider {
             // 比例 = 该区域客户数 / 总客户数
             BigDecimal ratio = regionTotal.divide(totalCustomers, 10, RoundingMode.HALF_UP);
             ratios.put(region, ratio);
-            log.debug("诚信自律小组：区域 {} 客户数占比: {} (客户数: {}, 总客户数: {})",
+            log.debug("诚信互助小组：区域 {} 客户数占比: {} (客户数: {}, 总客户数: {})",
                     region, ratio, regionTotal, totalCustomers);
         }
 
@@ -89,7 +89,7 @@ public class IntegrityGroupRatioProvider implements GroupRatioProvider {
             return Collections.emptyMap();
         }
 
-        // 诚信自律小组：每个区域就是一个独立的组
+        // 诚信互助小组：每个区域就是一个独立的组
         Map<String, String> mapping = new LinkedHashMap<>();
         for (String region : regions) {
             mapping.put(region, region);

@@ -3,12 +3,24 @@ server:
 
 spring:
   config:
-    import: optional:classpath:config/encoding-rules.yml,optional:file:./config/encoding-rules.yml
+    import: optional:classpath:config/encoding-rules.yml,optional:file:./config/encoding-rules.yml,optional:classpath:config/price-band-rules.yml,optional:file:./config/price-band-rules.yml
   datasource:
-    url: jdbc:mysql://localhost:3306/marketing?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8
+    url: jdbc:mysql://localhost:3306/marketing?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&connectTimeout=60000&socketTimeout=300000&autoReconnect=true&failOverReadOnly=false&maxReconnects=3
     username: root
     password: LuvuubyRK*Jason1258
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      # 连接池配置
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 60000
+      idle-timeout: 300000
+      max-lifetime: 1800000
+      # 连接保活配置
+      connection-test-query: SELECT 1
+      keepalive-time: 30000
+      # 连接泄漏检测
+      leak-detection-threshold: 60000
 
   servlet:
     multipart:
@@ -25,6 +37,12 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
         format_sql: true
+       
+# MyBatis-Plus配置
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    default-enum-type-handler: org.apache.ibatis.type.EnumOrdinalTypeHandler
        
 logging:
   level:

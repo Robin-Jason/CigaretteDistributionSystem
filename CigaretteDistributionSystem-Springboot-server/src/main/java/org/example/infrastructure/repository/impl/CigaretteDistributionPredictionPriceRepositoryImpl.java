@@ -66,6 +66,23 @@ public class CigaretteDistributionPredictionPriceRepositoryImpl implements Cigar
     }
 
     /**
+     * 按投放方式删除指定分区的记录
+     *
+     * @param year           年份
+     * @param month          月份
+     * @param weekSeq        周序号
+     * @param deliveryMethod 投放方式
+     * @return 删除行数
+     */
+    @Override
+    public int deleteByDeliveryMethod(Integer year, Integer month, Integer weekSeq, String deliveryMethod) {
+        log.debug("删除预测价格数据: {}-{}-{}, 投放方式: {}", year, month, weekSeq, deliveryMethod);
+        int count = predictionPriceMapper.deleteByDeliveryMethod(year, month, weekSeq, deliveryMethod);
+        log.info("删除预测价格数据完成: {}-{}-{}, 投放方式: {}, 删除 {} 条记录", year, month, weekSeq, deliveryMethod, count);
+        return count;
+    }
+
+    /**
      * 查询指定年月周的所有预测数据（价格分区表）
      *
      * @param year    年份

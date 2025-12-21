@@ -40,5 +40,12 @@
         FROM `integrity_group_code_mapping`
         ORDER BY sort_order ASC
     </select>
+
+    <select id="selectGroupCodeByGroupName" resultType="string">
+        SELECT group_code
+        FROM `integrity_group_code_mapping`
+        WHERE group_name = #{groupName}
+        LIMIT 1
+    </select>
 </mapper>
 

@@ -32,5 +32,15 @@ public interface CigaretteDistributionInfoRepository {
      * @return 列表，每条包含 DELIVERY_METHOD/DELIVERY_ETYPE/TAG
      */
     List<Map<String, Object>> findDistinctCombinations(Integer year, Integer month, Integer weekSeq);
+
+    /**
+     * 查询指定分区内“按价位段自选投放”卷烟的候选列表（含批发价）。
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @return 候选卷烟列表，每条至少包含 CIG_CODE、CIG_NAME、DELIVERY_AREA、DELIVERY_METHOD、DELIVERY_ETYPE、WHOLESALE_PRICE 等字段
+     */
+    List<Map<String, Object>> findPriceBandCandidates(Integer year, Integer month, Integer weekSeq);
 }
 

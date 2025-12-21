@@ -44,24 +44,25 @@ distribution:
           - "档位+信用等级"
       - code: "8"
         labels:
-          - "档位+诚信自律小组"
+          - "档位+诚信互助小组"
     region-types:
       - type: COUNTY
         entries:
+          # 区县区域名称规则：只取前两个字（用于笛卡尔积时缩短字符串长度）
           - code: "Q1"
-            labels: ["城区烟草专卖局(营销部)", "城区烟草专卖局", "城区"]
+            labels: ["城区"]
           - code: "Q2"
-            labels: ["丹江口市烟草专卖局(营销部)", "丹江口市烟草专卖局", "丹江口市", "丹江"]
+            labels: ["丹江"]
           - code: "Q3"
-            labels: ["房县烟草专卖局(营销部)", "房县烟草专卖局", "房县"]
+            labels: ["房县"]
           - code: "Q4"
-            labels: ["郧阳区烟草专卖局(营销部)", "郧阳区烟草专卖局", "郧阳区", "郧阳"]
+            labels: ["郧阳"]
           - code: "Q5"
-            labels: ["竹山县烟草专卖局(营销部)", "竹山县烟草专卖局", "竹山县", "竹山"]
+            labels: ["竹山"]
           - code: "Q6"
-            labels: ["郧西县烟草专卖局(营销部)", "郧西县烟草专卖局", "郧西县", "郧西"]
+            labels: ["郧西"]
           - code: "Q7"
-            labels: ["竹溪县烟草专卖局(营销部)", "竹溪县烟草专卖局", "竹溪县", "竹溪"]
+            labels: ["竹溪"]
       - type: MARKET_TYPE
         entries:
           - code: "M1"
@@ -77,7 +78,7 @@ distribution:
           - code: "F3"
             labels: ["镇中心区"]
           - code: "F4"
-            labels: ["镇乡结合区", "镇乡接合区"]
+            labels: ["镇乡结合区"]
           - code: "F5"
             labels: ["乡中心区"]
           - code: "F6"
@@ -120,60 +121,61 @@ distribution:
             labels: ["其他"]
       - type: MARKET_DEPARTMENT
         entries:
+          # 市场部区域名称规则：去掉"市场部"后缀（用于笛卡尔积时缩短字符串长度）
           - code: "B1"
-            labels: ["茅箭市场部"]
+            labels: ["茅箭市场部", "茅箭"]
           - code: "B2"
-            labels: ["白浪市场部"]
+            labels: ["白浪市场部", "白浪"]
           - code: "B3"
-            labels: ["张湾市场部"]
+            labels: ["张湾市场部", "张湾"]
           - code: "B4"
-            labels: ["丹江口城区市场部"]
+            labels: ["丹江口城区市场部", "丹江口城区"]
           - code: "B5"
-            labels: ["房县城关市场部"]
+            labels: ["房县城关市场部", "房县城关"]
           - code: "B6"
-            labels: ["城关市场部"]
+            labels: ["城关市场部", "城关"]
           - code: "B7"
-            labels: ["竹山城关市场部"]
+            labels: ["竹山城关市场部", "竹山城关"]
           - code: "B8"
-            labels: ["武当山市场部"]
+            labels: ["武当山市场部", "武当山"]
           - code: "B9"
-            labels: ["郧阳城关市场部"]
+            labels: ["郧阳城关市场部", "郧阳城关"]
           - code: "B10"
-            labels: ["宝丰市场部"]
+            labels: ["宝丰市场部", "宝丰"]
           - code: "B11"
-            labels: ["竹溪城关市场部"]
+            labels: ["竹溪城关市场部", "竹溪城关"]
           - code: "B12"
-            labels: ["羊尾市场部"]
+            labels: ["羊尾市场部", "羊尾"]
           - code: "B13"
-            labels: ["柳陂市场部"]
+            labels: ["柳陂市场部", "柳陂"]
           - code: "B14"
-            labels: ["南化市场部"]
+            labels: ["南化市场部", "南化"]
           - code: "B15"
-            labels: ["店子市场部"]
+            labels: ["店子市场部", "店子"]
           - code: "B16"
-            labels: ["竹坪市场部"]
+            labels: ["竹坪市场部", "竹坪"]
           - code: "B17"
-            labels: ["浪河市场部"]
+            labels: ["浪河市场部", "浪河"]
           - code: "B18"
-            labels: ["蒋家堰市场部"]
+            labels: ["蒋家堰市场部", "蒋家堰"]
           - code: "B19"
-            labels: ["化龙市场部"]
+            labels: ["化龙市场部", "化龙"]
           - code: "B20"
-            labels: ["水坪市场部"]
+            labels: ["水坪市场部", "水坪"]
           - code: "B21"
-            labels: ["习家店市场部"]
+            labels: ["习家店市场部", "习家店"]
           - code: "B22"
-            labels: ["泉溪市场部"]
+            labels: ["泉溪市场部", "泉溪"]
           - code: "B23"
-            labels: ["大木市场部"]
+            labels: ["大木市场部", "大木"]
           - code: "B24"
-            labels: ["青峰市场部"]
+            labels: ["青峰市场部", "青峰"]
           - code: "B25"
-            labels: ["官渡市场部"]
+            labels: ["官渡市场部", "官渡"]
           - code: "B26"
-            labels: ["门古市场部"]
+            labels: ["门古市场部", "门古"]
           - code: "B27"
-            labels: ["鲍峡市场部"]
+            labels: ["鲍峡市场部", "鲍峡"]
       - type: CREDIT_LEVEL
         entries:
           - code: "X1"

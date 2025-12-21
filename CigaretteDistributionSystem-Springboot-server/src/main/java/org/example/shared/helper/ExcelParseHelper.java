@@ -87,14 +87,31 @@ public final class ExcelParseHelper {
             for (int i = 0; i < lastCellNum; i++) {
                 Cell cell = headerRow.getCell(i);
                 String rawHeader = cell != null ? cell.toString() : "";
-                String normalized = normalizeColumnName(rawHeader);
-                if (normalized == null || normalized.isEmpty() || "ID".equals(normalized)) {
+                if (rawHeader == null || rawHeader.trim().isEmpty() || "ID".equalsIgnoreCase(rawHeader.trim())) {
                     headerColumns.add(null);
                     continue;
                 }
-                headerColumns.add(normalized);
-                if (seenColumns.add(normalized)) {
-                    orderedColumns.add(normalized);
+                
+                // 检查是否为中文列名（动态标签列）
+                String trimmedHeader = rawHeader.trim();
+                boolean isChineseColumn = trimmedHeader.matches(".*[\\u4e00-\\u9fa5].*");
+                
+                String columnName;
+                if (isChineseColumn) {
+                    // 中文列名（动态标签列）直接使用原始列名，不进行规范化
+                    columnName = trimmedHeader;
+                } else {
+                    // 英文列名进行规范化处理
+                    columnName = normalizeColumnName(rawHeader);
+                    if (columnName == null || columnName.isEmpty()) {
+                        headerColumns.add(null);
+                        continue;
+                    }
+                }
+                
+                headerColumns.add(columnName);
+                if (seenColumns.add(columnName)) {
+                    orderedColumns.add(columnName);
                 }
             }
 

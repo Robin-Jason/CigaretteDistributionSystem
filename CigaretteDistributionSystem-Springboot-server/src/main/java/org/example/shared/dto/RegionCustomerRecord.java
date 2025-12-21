@@ -36,6 +36,19 @@ public class RegionCustomerRecord {
     }
 
     /**
+     * 获取指定索引的档位值（用于MyBatis映射）
+     * 
+     * @param index 档位索引（0=D30, 1=D29, ..., 29=D1）
+     * @return 档位值，如果索引越界返回BigDecimal.ZERO
+     */
+    public BigDecimal getGrade(int index) {
+        if (grades == null || index < 0 || index >= grades.length) {
+            return BigDecimal.ZERO;
+        }
+        return grades[index] != null ? grades[index] : BigDecimal.ZERO;
+    }
+
+    /**
      * 转换为SQL插入参数数组
      * 顺序：YEAR, MONTH, WEEK_SEQ, REGION, D30, D29, ..., D1, TOTAL
      *

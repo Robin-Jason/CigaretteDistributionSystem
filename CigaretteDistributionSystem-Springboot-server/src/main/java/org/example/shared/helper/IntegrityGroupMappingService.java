@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 诚信自律小组映射刷新/查询服务。
+ * 诚信互助小组映射刷新/查询服务。
  *
  * <p>职责：从 base_customer_info 统计小组，重建 integrity_group_code_mapping；提供查询。</p>
  *
@@ -32,6 +32,15 @@ public class IntegrityGroupMappingService {
 
     /**
      * 基于 base_customer_info 重新生成诚信小组映射。
+     * <p>
+     * 重要：此方法必须在每次导入或更新 base_customer_info 表后调用，确保 integrity_group_code_mapping 表与 base_customer_info 保持同步。
+     * </p>
+     * <p>
+     * 业务规则：
+     * - 如果 base_customer_info 中有诚信互助小组数据，则清空并重新生成 integrity_group_code_mapping 表
+     * - 如果 base_customer_info 中没有诚信互助小组数据，则清空 integrity_group_code_mapping 表（表为空是正常状态）
+     * - 如果后续需要使用诚信互助小组扩展类型，但 integrity_group_code_mapping 表为空，系统会抛出 IntegrityGroupMappingEmptyException 异常
+     * </p>
      *
      * @example 客户表存在小组数据 -> 清空后批量写入映射表
      */
@@ -41,7 +50,8 @@ public class IntegrityGroupMappingService {
 
         List<Map<String, Object>> rows = baseCustomerInfoRepository.selectGroupNameStatistics();
         if (rows.isEmpty()) {
-            log.warn("base_customer_info 中无有效的诚信自律小组数据，已清空 integrity_group_code_mapping");
+            log.warn("base_customer_info 中无有效的诚信互助小组数据，已清空 integrity_group_code_mapping。" +
+                    "如果后续需要使用诚信互助小组扩展类型，请确保 base_customer_info 中包含 GROUP_NAME 字段数据");
             return;
         }
 
@@ -69,11 +79,11 @@ public class IntegrityGroupMappingService {
         }
 
         if (mappings.isEmpty()) {
-            log.warn("未找到可写入的诚信自律小组数据，integrity_group_code_mapping 仍为空");
+            log.warn("未找到可写入的诚信互助小组数据，integrity_group_code_mapping 仍为空");
             return;
         }
         integrityGroupMappingRepository.batchInsert(mappings);
-        log.info("刷新诚信自律小组编码映射完成，共写入 {} 条记录", mappings.size());
+        log.info("刷新诚信互助小组编码映射完成，共写入 {} 条记录", mappings.size());
     }
 
     /**

@@ -1,0 +1,46 @@
+distribution:
+  import-validation:
+    # 导入基础数据的批次级校验规则
+    city-wide:
+      # 全市投放卷烟数量 / 本期投放所有卷烟数量 的最小占比（运维可调整）
+      # 例如：0.4 表示至少 40% 的卷烟需要是“全市投放”
+      min-ratio: 0.4
+
+    # 货源属性 + 投放类型 + 是否允许叠加标签 的合法性规则
+    #
+    # - source-code：货源属性编码，供系统内部使用（如 TIGHT/BALANCED/FULL/NEW）
+    # - labels：与 Excel / 业务口径中出现的货源属性名称做映射
+    # - allowed-delivery-methods：允许的投放类型编码集合，对应 encoding-rules.yml 中的 A/B/C/D/E
+    #   * A：按档位投放
+    #   * B：按档位扩展投放
+    #   * C：按价位段自选投放
+    #   * D：选点投放
+    #   * E：按需投放
+    # - allow-tag：是否允许在该货源属性下叠加标签投放
+    supply-rules:
+      # 紧俏货源：只能按档位投放或按档位扩展投放，且默认不叠加标签
+      - source-code: "TIGHT"
+        labels: ["紧俏货源"]
+        allowed-delivery-methods: ["A", "B"]
+        allow-tag: false
+
+      # 均衡满足：合法集合为 {按需投放(E)，按档位投放(A)，按档位扩展投放(B)}，不允许叠加标签
+      - source-code: "BALANCED"
+        labels: ["均衡满足"]
+        allowed-delivery-methods: ["E", "A", "B"]
+        allow-tag: false
+
+      # 完全满足：合法集合为 {按需投放(E)}，不允许叠加标签
+      - source-code: "FULL"
+        labels: ["完全满足"]
+        allowed-delivery-methods: ["E"]
+        allow-tag: false
+
+      # 新品满足：合法集合为 {选点投放(D)，按档位投放(A)，按档位扩展投放(B)}，
+      # 并且只有新品货源允许叠加标签投放
+      - source-code: "NEW"
+        labels: ["新品满足"]
+        allowed-delivery-methods: ["D", "A", "B"]
+        allow-tag: true
+
+
