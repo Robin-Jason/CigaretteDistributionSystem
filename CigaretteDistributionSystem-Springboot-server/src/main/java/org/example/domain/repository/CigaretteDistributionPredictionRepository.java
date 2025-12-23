@@ -68,5 +68,52 @@ public interface CigaretteDistributionPredictionRepository {
     int deleteByYearMonthWeekSeq(Integer year, Integer month, Integer weekSeq);
 
     int delete(QueryWrapper<CigaretteDistributionPredictionPO> queryWrapper);
+
+    /**
+     * 删除指定卷烟的所有区域记录
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @param cigCode 卷烟代码
+     * @param cigName 卷烟名称
+     * @return 删除行数
+     */
+    int deleteByCigarette(Integer year, Integer month, Integer weekSeq, String cigCode, String cigName);
+
+    /**
+     * 删除指定卷烟的特定区域记录
+     *
+     * @param year         年份
+     * @param month        月份
+     * @param weekSeq      周序号
+     * @param cigCode      卷烟代码
+     * @param cigName      卷烟名称
+     * @param deliveryArea 投放区域
+     * @return 删除行数
+     */
+    int deleteByDeliveryArea(Integer year, Integer month, Integer weekSeq, String cigCode, String cigName, String deliveryArea);
+
+    /**
+     * 统计指定卷烟的区域记录数
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @param cigCode 卷烟代码
+     * @param cigName 卷烟名称
+     * @return 区域记录数
+     */
+    int countByCigarette(Integer year, Integer month, Integer weekSeq, String cigCode, String cigName);
+
+    /**
+     * 查询指定分区的不重复投放组合
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @return 投放组合列表，包含 DELIVERY_METHOD、DELIVERY_ETYPE、TAG 字段
+     */
+    List<Map<String, Object>> findDistinctCombinations(Integer year, Integer month, Integer weekSeq);
 }
 

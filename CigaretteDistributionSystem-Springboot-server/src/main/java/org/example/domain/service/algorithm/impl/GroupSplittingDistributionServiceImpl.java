@@ -1,5 +1,6 @@
 package org.example.domain.service.algorithm.impl;
 
+import org.example.domain.model.valueobject.GradeRange;
 import org.example.domain.service.algorithm.ColumnWiseAdjustmentService;
 import org.example.domain.service.algorithm.GroupSplittingDistributionService;
 import org.example.domain.service.algorithm.SingleLevelDistributionService;
@@ -44,6 +45,7 @@ public class GroupSplittingDistributionServiceImpl implements GroupSplittingDist
     public BigDecimal[][] distribute(List<String> regions,
                                      BigDecimal[][] customerMatrix,
                                      BigDecimal targetAmount,
+                                     GradeRange gradeRange,
                                      Function<String, String> groupingFunction,
                                      Map<String, BigDecimal> groupRatios) {
         BigDecimal normalizedTarget = roundToWholeNumber(targetAmount);
@@ -53,13 +55,19 @@ public class GroupSplittingDistributionServiceImpl implements GroupSplittingDist
                 || normalizedTarget.compareTo(BigDecimal.ZERO) <= 0) {
             return new BigDecimal[0][0];
         }
+
+        // 处理 null 参数，使用默认范围
+        GradeRange range = gradeRange != null ? gradeRange : GradeRange.full();
+        int maxIndex = range.getMaxIndex();
+        int minIndex = range.getMinIndex();
+
         validateMatrixDimensions(regions.size(), customerMatrix);
 
-        // 防御性检查：如果存在某个区域30个档位客户数全部为0，则该卷烟无法进行有效分配
+        // 防御性检查：如果存在某个区域在范围内所有档位客户数全部为0，则该卷烟无法进行有效分配
         for (int r = 0; r < customerMatrix.length; r++) {
             BigDecimal[] row = customerMatrix[r];
             boolean allZero = true;
-            for (int g = 0; g < row.length; g++) {
+            for (int g = maxIndex; g <= minIndex && g < row.length; g++) {
                 if (row[g] != null && row[g].compareTo(BigDecimal.ZERO) > 0) {
                     allZero = false;
                     break;
@@ -67,7 +75,7 @@ public class GroupSplittingDistributionServiceImpl implements GroupSplittingDist
             }
             if (allZero) {
                 throw new IllegalStateException(
-                        "GroupSplitting 分配失败：区域索引 " + r + " 的30个档位客户数全部为0，已停止本卷烟分配以避免死循环");
+                        "GroupSplitting 分配失败：区域索引 " + r + " 在档位范围内客户数全部为0，已停止本卷烟分配以避免死循环");
             }
         }
 
@@ -97,11 +105,11 @@ public class GroupSplittingDistributionServiceImpl implements GroupSplittingDist
 
             BigDecimal[][] groupMatrix = extractSubMatrix(context.indices(), customerMatrix);
             List<String> groupRegions = extractGroupRegions(context.indices(), regions);
-            BigDecimal[][] groupAllocation = runStandaloneAlgorithm(groupRegions, groupMatrix, groupTarget);
+            // 传递 GradeRange 给内部算法
+            BigDecimal[][] groupAllocation = runStandaloneAlgorithm(groupRegions, groupMatrix, groupTarget, range);
             copyGroupResult(groupAllocation, context.indices(), finalMatrix);
         }
 
-        enforceMonotonicConstraint(finalMatrix);
         return finalMatrix;
     }
 
@@ -151,19 +159,21 @@ public class GroupSplittingDistributionServiceImpl implements GroupSplittingDist
      * @param groupRegions 分组内的区域列表
      * @param customerMatrix 分组内的客户数矩阵
      * @param targetAmount 分组的目标预投放量
+     * @param gradeRange 档位范围
      * @return 分配矩阵
      */
     private BigDecimal[][] runStandaloneAlgorithm(List<String> groupRegions,
                                                   BigDecimal[][] customerMatrix,
-                                                  BigDecimal targetAmount) {
+                                                  BigDecimal targetAmount,
+                                                  GradeRange gradeRange) {
         int regionCount = groupRegions.size();
         
         if (regionCount <= 1) {
             // 分组内只有1个区域，使用SINGLE_LEVEL算法
-            return singleLevelService.distribute(groupRegions, customerMatrix, targetAmount);
+            return singleLevelService.distribute(groupRegions, customerMatrix, targetAmount, gradeRange);
         } else {
             // 分组内有多个区域，使用COLUMN_WISE算法
-            return columnWiseService.distribute(groupRegions, customerMatrix, targetAmount, null);
+            return columnWiseService.distribute(groupRegions, customerMatrix, targetAmount, gradeRange, null);
         }
     }
     
@@ -190,16 +200,6 @@ public class GroupSplittingDistributionServiceImpl implements GroupSplittingDist
         for (int localRow = 0; localRow < groupResult.length; localRow++) {
             int originalIndex = indices.get(localRow);
             finalMatrix[originalIndex] = Arrays.copyOf(groupResult[localRow], GRADE_COUNT);
-        }
-    }
-
-    private void enforceMonotonicConstraint(BigDecimal[][] matrix) {
-        for (BigDecimal[] row : matrix) {
-            for (int grade = 1; grade < GRADE_COUNT; grade++) {
-                if (row[grade].compareTo(row[grade - 1]) > 0) {
-                    row[grade] = row[grade - 1];
-                }
-            }
         }
     }
 

@@ -1,5 +1,6 @@
 package org.example.domain.service.algorithm.impl;
 
+import org.example.domain.model.valueobject.GradeRange;
 import org.example.domain.service.algorithm.SingleLevelDistributionService;
 
 import java.math.BigDecimal;
@@ -21,17 +22,36 @@ import java.util.List;
 public class SingleLevelDistributionServiceImpl implements SingleLevelDistributionService {
 
     private static final BigDecimal INCREMENT = BigDecimal.ONE;
+    
+    /**
+     * 粗调结果包装类，包含分配方案和最后一次+1的档位信息
+     */
+    private static class CoarseAdjustmentResult {
+        BigDecimal[] allocation;
+        int lastIncrementedGrade;  // 最后一次执行+1的档位（-1表示未记录）
+        
+        CoarseAdjustmentResult(BigDecimal[] allocation, int lastIncrementedGrade) {
+            this.allocation = allocation;
+            this.lastIncrementedGrade = lastIncrementedGrade;
+        }
+    }
 
     @Override
     public BigDecimal[][] distribute(List<String> targetRegions,
                                      BigDecimal[][] regionCustomerMatrix,
-                                     BigDecimal targetAmount) {
+                                     BigDecimal targetAmount,
+                                     GradeRange gradeRange) {
         if (targetRegions == null || targetRegions.isEmpty()
                 || regionCustomerMatrix == null
                 || targetAmount == null
                 || targetAmount.compareTo(BigDecimal.ZERO) <= 0) {
             return new BigDecimal[0][0];
         }
+
+        // 处理 null 参数，使用默认范围
+        GradeRange range = gradeRange != null ? gradeRange : GradeRange.full();
+        int maxIndex = range.getMaxIndex();
+        int minIndex = range.getMinIndex();
 
         int gradeCount = resolveGradeCount(regionCustomerMatrix);
         if (gradeCount <= 0) {
@@ -43,18 +63,18 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
         // 单区域算法，regionCustomerMatrix只有一行
         BigDecimal[] customerRow = regionCustomerMatrix[0];
 
+        // 初始化30列结果矩阵（全0）
         BigDecimal[][] allocationMatrix = initMatrix(targetRegions.size(), gradeCount);
         try {
-            // 执行新算法
-            BigDecimal[] result = distributeSingleRegion(customerRow, targetAmount, gradeCount);
+            // 执行新算法，只在 maxIndex ~ minIndex 范围内计算
+            BigDecimal[] result = distributeSingleRegion(customerRow, targetAmount, gradeCount, maxIndex, minIndex);
             
             // 将结果复制到分配矩阵（单区域，只有一行）
             allocationMatrix[0] = result;
-            
-            // 强制单调性约束（确保 D30 >= ... >= D1）
-            enforceMonotonicConstraint(allocationMatrix, gradeCount);
         } catch (Exception ex) {
-            // 领域服务不依赖日志，静默处理异常
+            // 领域服务不依赖日志，打印异常信息
+            System.err.println("[SingleLevel] 分配异常: " + ex.getMessage());
+            ex.printStackTrace();
         }
         return allocationMatrix;
     }
@@ -66,7 +86,9 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
                                                               BigDecimal[] customerRow,
                                                               BigDecimal targetAmount,
                                                               int gradeCount,
-                                                              BigDecimal startAmount) {
+                                                              BigDecimal startAmount,
+                                                              int maxIndex,
+                                                              int minIndex) {
         SingleLevelFillResult result = new SingleLevelFillResult();
         BigDecimal[] working = Arrays.copyOf(baseAllocation, gradeCount);
         BigDecimal currentAmount = startAmount;
@@ -74,11 +96,8 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
         boolean hasProgress = false;
         while (true) {
             boolean roundProgress = false;
-            for (int grade = 0; grade < gradeCount; grade++) {
-                if (!isValidIncrementSingle(working, grade)) {
-                    continue;
-                }
-
+            // 只在 maxIndex ~ minIndex 范围内进行计算
+            for (int grade = maxIndex; grade <= minIndex; grade++) {
                 BigDecimal customerCount = customerRow[grade];
                 if (customerCount == null) {
                     customerCount = BigDecimal.ZERO;
@@ -127,15 +146,19 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
      * @param customerRow 客户数数组（30个档位）
      * @param targetAmount 目标预投放量
      * @param gradeCount 档位数量（通常为30）
-     * @return 分配结果数组（30个档位）
+     * @param maxIndex HG索引（D30=0）
+     * @param minIndex LG索引（D1=29）
+     * @return 分配结果数组（30个档位），范围外列为0
      */
     private BigDecimal[] distributeSingleRegion(BigDecimal[] customerRow,
                                                 BigDecimal targetAmount,
-                                                int gradeCount) {
-        // 防御性检查：如果整行客户数全为0，则该卷烟无法进行有效分配，直接抛出异常
+                                                int gradeCount,
+                                                int maxIndex,
+                                                int minIndex) {
+        // 防御性检查：如果范围内客户数全为0，则该卷烟无法进行有效分配，直接抛出异常
         boolean allZero = true;
         if (customerRow != null) {
-            for (int i = 0; i < gradeCount && i < customerRow.length; i++) {
+            for (int i = maxIndex; i <= minIndex && i < customerRow.length; i++) {
                 BigDecimal c = customerRow[i];
                 if (c != null && c.compareTo(BigDecimal.ZERO) > 0) {
                     allZero = false;
@@ -144,11 +167,12 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
             }
         }
         if (allZero) {
-            throw new IllegalStateException("SingleLevel 分配失败：该卷烟在当前区域30个档位客户数全部为0，已停止本卷烟分配以避免死循环");
+            throw new IllegalStateException("SingleLevel 分配失败：该卷烟在档位范围内客户数全部为0，已停止本卷烟分配以避免死循环");
         }
 
         // 1. 粗调阶段（候选方案1）
-        BigDecimal[] candidate1 = coarseAdjustment(customerRow, targetAmount, gradeCount);
+        CoarseAdjustmentResult coarseResult = coarseAdjustment(customerRow, targetAmount, gradeCount, maxIndex, minIndex);
+        BigDecimal[] candidate1 = coarseResult.allocation;
         BigDecimal amount1 = calculateAmount(candidate1, customerRow);
         BigDecimal error1 = targetAmount.subtract(amount1).abs();
         
@@ -158,8 +182,8 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
         }
         
         // 2. 高档位微调阶段
-        // 撤销粗调方案一次+1操作作为候选方案2
-        BigDecimal[] candidate2 = rollbackLastIncrement(candidate1, customerRow, targetAmount, gradeCount);
+        // 撤销粗调方案最后一次+1操作作为候选方案2
+        BigDecimal[] candidate2 = rollbackLastIncrement(candidate1, customerRow, targetAmount, gradeCount, coarseResult.lastIncrementedGrade);
         BigDecimal amount2 = calculateAmount(candidate2, customerRow);
         BigDecimal error2 = targetAmount.subtract(amount2).abs();
         
@@ -171,7 +195,7 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
         // 迭代微调：每轮基于当前余量做一次完整的HG→LG填充，终止条件为余量<HG客户数
         int refineIterations = 0;
         BigDecimal currentAmount = amount2;
-        final BigDecimal hgCustomerCount = customerRow[0] == null ? BigDecimal.ZERO : customerRow[0];
+        final BigDecimal hgCustomerCount = customerRow[maxIndex] == null ? BigDecimal.ZERO : customerRow[maxIndex];
         BigDecimal lastRemainder = null;
         int stagnantRemainderRounds = 0;
         
@@ -187,12 +211,12 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
                     BigDecimal amount3 = currentAmount;
                     error3 = targetAmount.subtract(amount3).abs();
 
-                    if (isValidIncrementSingle(candidate2, 0)) {
-                        candidate4 = Arrays.copyOf(candidate2, gradeCount);
-                        candidate4[0] = candidate4[0].add(INCREMENT);
-                        BigDecimal amount4 = currentAmount.add(hgCustomerCount);
-                        error4 = targetAmount.subtract(amount4).abs();
-                    }
+                    // 候选方案4：在候选方案3基础上，HG档位+1
+                    candidate4 = Arrays.copyOf(candidate2, gradeCount);
+                    candidate4[maxIndex] = candidate4[maxIndex].add(INCREMENT);
+                    BigDecimal amount4 = currentAmount.add(hgCustomerCount);
+                    error4 = targetAmount.subtract(amount4).abs();
+                    
                     break;
                 }
             } else {
@@ -211,7 +235,7 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
             }
 
             SingleLevelFillResult iterationResult = runSingleLevelFillIteration(
-                    candidate2, customerRow, targetAmount, gradeCount, currentAmount);
+                    candidate2, customerRow, targetAmount, gradeCount, currentAmount, maxIndex, minIndex);
 
             if (!iterationResult.progressMade) {
                 break;
@@ -285,32 +309,33 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
     }
 
     /**
-     * 粗调阶段：从HG到LG，多轮逐档位+1，直到刚好超出目标
+     * 粗调阶段：从HG到LG，多轮逐档位+1，直到实际超出目标
      * 
      * @param customerRow 客户数数组（30个档位）
      * @param targetAmount 目标预投放量
      * @param gradeCount 档位数量
-     * @return 粗调后的分配方案（候选方案1）
+     * @param maxIndex HG索引
+     * @param minIndex LG索引
+     * @return 粗调结果，包含分配方案和最后一次+1的档位信息
      */
-    private BigDecimal[] coarseAdjustment(BigDecimal[] customerRow,
+    private CoarseAdjustmentResult coarseAdjustment(BigDecimal[] customerRow,
                             BigDecimal targetAmount,
-                            int gradeCount) {
+                            int gradeCount,
+                            int maxIndex,
+                            int minIndex) {
         BigDecimal[] allocation = new BigDecimal[gradeCount];
         Arrays.fill(allocation, BigDecimal.ZERO);
         BigDecimal currentAmount = BigDecimal.ZERO;
         int coarseIterations = 0;
+        int lastIncrementedGrade = -1;  // 记录最后一次执行+1的档位
 
         while (true) {
             if (++coarseIterations > 10_000_000) {
                 break;
             }
             boolean hasProgress = false;
-            for (int grade = 0; grade < gradeCount; grade++) {
-                // 检查单调性约束
-                if (!isValidIncrementSingle(allocation, grade)) {
-                    continue;
-                }
-                
+            // 只在 maxIndex ~ minIndex 范围内进行计算
+            for (int grade = maxIndex; grade <= minIndex; grade++) {
                 BigDecimal customerCount = customerRow[grade];
                 if (customerCount == null) {
                     customerCount = BigDecimal.ZERO;
@@ -318,21 +343,22 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
                 
                 BigDecimal newAmount = currentAmount.add(customerCount);
                 
-                // 如果恰好等于目标，直接返回
+                // 如果恰好等于目标，执行+1后直接返回
                 if (newAmount.compareTo(targetAmount) == 0) {
                     allocation[grade] = allocation[grade].add(INCREMENT);
-                    return allocation;
+                    return new CoarseAdjustmentResult(allocation, -1);
                 }
                 
-                // 如果超出目标，停止
-                if (newAmount.compareTo(targetAmount) > 0) {
-                    return allocation;
-                }
-                
-                // +1操作
+                // 先执行+1操作
                 allocation[grade] = allocation[grade].add(INCREMENT);
                 currentAmount = newAmount;
+                lastIncrementedGrade = grade;  // 记录这次+1的档位
                 hasProgress = true;
+                
+                // 如果超出目标，返回（已经执行了+1）
+                if (newAmount.compareTo(targetAmount) > 0) {
+                    return new CoarseAdjustmentResult(allocation, lastIncrementedGrade);
+                }
             }
             
             if (!hasProgress) {
@@ -340,45 +366,40 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
             }
         }
         
-        return allocation;
+        return new CoarseAdjustmentResult(allocation, lastIncrementedGrade);
     }
     
     /**
-     * 撤销导致超出目标的最后一次+1操作
+     * 撤销粗调阶段最后一次+1操作
      * 返回撤销后的分配方案
      * 
-     * @param allocation 当前分配方案
+     * @param allocation 当前分配方案（粗调结果）
      * @param customerRow 客户数数组
      * @param targetAmount 目标预投放量
      * @param gradeCount 档位数量
+     * @param lastIncrementedGrade 粗调阶段最后一次执行+1的档位（-1表示未记录）
      * @return 撤销后的分配方案
      */
     private BigDecimal[] rollbackLastIncrement(BigDecimal[] allocation,
                                                BigDecimal[] customerRow,
-                                     BigDecimal targetAmount,
-                                     int gradeCount) {
+                                               BigDecimal targetAmount,
+                                               int gradeCount,
+                                               int lastIncrementedGrade) {
         BigDecimal[] result = Arrays.copyOf(allocation, gradeCount);
-        // 先整体计算一次当前实际投放量，后续用增量方式更新，避免每次尝试都整行重算
-        BigDecimal currentAmount = calculateAmount(result, customerRow);
-
-        // 从低档位到高档位查找（因为最后超出的是低档位）
+        
+        // 如果记录了最后一次+1的档位，直接撤销该档位
+        if (lastIncrementedGrade >= 0 && lastIncrementedGrade < gradeCount) {
+            if (result[lastIncrementedGrade].compareTo(BigDecimal.ZERO) > 0) {
+                result[lastIncrementedGrade] = result[lastIncrementedGrade].subtract(INCREMENT);
+                return result;
+            }
+        }
+        
+        // 如果没有记录或该档位为0（异常情况），从LG到HG查找第一个>0的档位撤销
         for (int grade = gradeCount - 1; grade >= 0; grade--) {
             if (result[grade].compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal customerCount = customerRow[grade];
-                if (customerCount == null) {
-                    customerCount = BigDecimal.ZERO;
-                }
-
-                // 撤销该档位一次 +1 后的实际投放量
-                BigDecimal newAmount = currentAmount.subtract(customerCount);
-
-                if (newAmount.compareTo(targetAmount) <= 0) {
-                    // 撤销后不超出，正式更新分配与当前量
-                    result[grade] = result[grade].subtract(INCREMENT);
-                    currentAmount = newAmount;
-                    return result;
-                }
-                // 否则跳过该档位，尝试更高档位的回撤
+                result[grade] = result[grade].subtract(INCREMENT);
+                return result;
             }
         }
 
@@ -404,44 +425,7 @@ public class SingleLevelDistributionServiceImpl implements SingleLevelDistributi
         return total;
     }
     
-    /**
-     * 检查单区域分配方案中，对指定档位+1是否违反单调性约束
-     * 
-     * @param allocation 分配方案数组
-     * @param grade 档位索引（0=HG, gradeCount-1=LG）
-     * @return 如果+1后不违反单调性约束，返回true
-     */
-    private boolean isValidIncrementSingle(BigDecimal[] allocation, int grade) {
-        if (allocation == null || grade < 0 || grade >= allocation.length) {
-            return false;
-        }
-        
-        // 临时+1
-        allocation[grade] = allocation[grade].add(INCREMENT);
-        boolean valid = true;
-        
-        // 检查是否违反单调性约束（低档位不能大于高档位）
-        if (grade > 0 && allocation[grade].compareTo(allocation[grade - 1]) > 0) {
-            valid = false;
-        }
-        
-        // 恢复原值
-        allocation[grade] = allocation[grade].subtract(INCREMENT);
-        return valid;
-    }
 
-    private void enforceMonotonicConstraint(BigDecimal[][] matrix, int gradeCount) {
-        for (BigDecimal[] row : matrix) {
-            if (row == null) {
-                continue;
-            }
-            for (int grade = 1; grade < gradeCount && grade < row.length; grade++) {
-                if (row[grade].compareTo(row[grade - 1]) > 0) {
-                    row[grade] = row[grade - 1];
-                }
-            }
-        }
-    }
 
     // 保留接口兼容性，当前未使用
     @SuppressWarnings("unused")

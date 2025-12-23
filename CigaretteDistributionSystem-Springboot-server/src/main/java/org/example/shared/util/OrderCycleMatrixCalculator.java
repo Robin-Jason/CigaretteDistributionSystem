@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.domain.repository.FilterCustomerTableRepository;
 import org.example.application.service.coordinator.TagExtractionService;
 import org.example.domain.model.valueobject.DeliveryExtensionType;
-import org.example.domain.model.tag.TagFilterRule;
+import org.example.domain.model.tag.TagFilter;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -67,7 +67,7 @@ public class OrderCycleMatrixCalculator {
     public Map<String, BigDecimal[]> calculateOrderCycleMatrix(
             CombinationStrategyAnalyzer.CombinationStrategy strategy,
             Integer year, Integer month, Integer weekSeq,
-            List<TagFilterRule> tagRules,
+            List<TagFilter> tagRules,
             OrderCycleType orderCycleType) {
         Map<String, BigDecimal[]> records = new LinkedHashMap<>();
         if (strategy.mode == CombinationStrategyAnalyzer.CombinationMode.CITY) {
@@ -98,7 +98,7 @@ public class OrderCycleMatrixCalculator {
     public Map<String, BigDecimal[]> buildRecordsForExtensions(
             List<DeliveryExtensionType> extensionTypes,
             Integer year, Integer month, Integer weekSeq,
-            List<TagFilterRule> tagRules,
+            List<TagFilter> tagRules,
             OrderCycleType type) {
         Map<String, BigDecimal[]> records = new LinkedHashMap<>();
         if (extensionTypes == null || extensionTypes.isEmpty()) {
@@ -168,7 +168,7 @@ public class OrderCycleMatrixCalculator {
             String baseRegionName,
             Integer year, Integer month, Integer weekSeq,
             Map<String, String> filters,
-            List<TagFilterRule> tagRules,
+            List<TagFilter> tagRules,
             OrderCycleType type) {
         Map<String, BigDecimal[]> records = new LinkedHashMap<>();
         if (tagRules == null || tagRules.isEmpty()) {
@@ -179,7 +179,7 @@ public class OrderCycleMatrixCalculator {
             return records;
         }
 
-        for (TagFilterRule rule : tagRules) {
+        for (TagFilter rule : tagRules) {
             String regionName = tagExtractionService.combineRegionWithTag(baseRegionName, rule.getTagName());
             BigDecimal[] grades = buildRecordForRegion(regionName, year, month, weekSeq, filters, rule, type);
             if (grades != null) {
@@ -205,7 +205,7 @@ public class OrderCycleMatrixCalculator {
             String regionName,
             Integer year, Integer month, Integer weekSeq,
             Map<String, String> filters,
-            TagFilterRule tagRule,
+            TagFilter tagRule,
             OrderCycleType orderCycleType) {
         String tagColumn = null;
         String tagOperator = null;

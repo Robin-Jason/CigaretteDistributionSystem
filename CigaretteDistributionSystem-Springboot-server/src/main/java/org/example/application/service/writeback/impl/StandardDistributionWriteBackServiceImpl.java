@@ -3,7 +3,7 @@ package org.example.application.service.writeback.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.application.service.encode.EncodeService;
-import org.example.application.service.writeback.DistributionWriteBackService;
+import org.example.application.service.writeback.StandardDistributionWriteBackService;
 import org.example.domain.repository.CigaretteDistributionPredictionPriceRepository;
 import org.example.domain.repository.CigaretteDistributionPredictionRepository;
 import org.example.domain.repository.RegionCustomerStatisticsRepository;
@@ -12,9 +12,7 @@ import org.example.infrastructure.persistence.po.CigaretteDistributionPrediction
 import org.example.shared.util.ActualDeliveryCalculator;
 import org.example.shared.util.PartitionTableManager;
 import org.example.shared.util.WriteBackHelper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -24,7 +22,7 @@ import java.util.Map;
 
 /**
  * 标准分配结果写回服务实现（按档位投放、按档位扩展投放等）。
- * <p>使用 REQUIRES_NEW，保证每条卷烟写回在独立事务中完成，避免一键分配形成大事务导致长时间运行或整体回滚。</p>
+ * <p>使用 REQUIRED 传播级别，加入调用方事务，避免嵌套事务导致的锁冲突。</p>
  *
  * @author Robin
  * @version 2.0
@@ -33,7 +31,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class StandardDistributionWriteBackServiceImpl implements DistributionWriteBackService {
+public class StandardDistributionWriteBackServiceImpl implements StandardDistributionWriteBackService {
 
     private final CigaretteDistributionPredictionRepository predictionRepository;
     private final CigaretteDistributionPredictionPriceRepository predictionPriceRepository;
@@ -44,7 +42,7 @@ public class StandardDistributionWriteBackServiceImpl implements DistributionWri
     private static final String PRICE_METHOD = "按价位段自选投放";
 
     @Override
-    @Transactional(rollbackFor = Exception.class, timeout = 60, propagation = Propagation.REQUIRES_NEW)
+    @Transactional(rollbackFor = Exception.class, timeout = 60)
     public boolean writeBackSingleCigarette(BigDecimal[][] allocationMatrix,
                                             BigDecimal[][] customerMatrix,
                                             List<String> targetList,
@@ -68,6 +66,10 @@ public class StandardDistributionWriteBackServiceImpl implements DistributionWri
 
             log.debug("writeBackSingleCigarette - 卷烟: {} - {}, deliveryMethod: {}, deliveryEtype: {}",
                     cigCode, cigName, deliveryMethod, deliveryEtype);
+
+            // remark 参数是从 Info 表传入的 BZ 字段，直接使用
+            // 如果 remark 为 null，使用默认值
+            String finalRemark = (remark != null && !remark.trim().isEmpty()) ? remark : "算法自动生成";
 
             // 构建所有区域记录用于编码表达式
             List<CigaretteDistributionPredictionPO> allCigaretteRecords = buildPredictionRecords(
@@ -117,12 +119,8 @@ public class StandardDistributionWriteBackServiceImpl implements DistributionWri
                     predictionData.setTagFilterConfig(tagFilterConfig);
                     predictionData.setActualDelivery(actualDelivery);
                     predictionData.setDeployinfoCode(encoded);
-
-                    if (BI_WEEKLY_VISIT_BOOST_RULE.needsBoost(remark)) {
-                        predictionData.setBz(remark);
-                    } else {
-                        predictionData.setBz("算法自动生成");
-                    }
+                    // 使用从 Info 表传入的备注
+                    predictionData.setBz(finalRemark);
 
                     // 使用 WriteBackHelper 设置档位值
                     WriteBackHelper.setGradesToEntity(predictionData, allocationMatrix[i]);
@@ -158,18 +156,6 @@ public class StandardDistributionWriteBackServiceImpl implements DistributionWri
             log.error("详细堆栈信息:", e);
             return false;
         }
-    }
-
-    @Override
-    public void writeBackPriceBandAllocations(List<Map<String, Object>> candidates,
-                                              Integer year,
-                                              Integer month,
-                                              Integer weekSeq,
-                                              BigDecimal[] cityCustomerRow) {
-        // 标准写回服务不支持价位段自选投放的批量写回
-        // 该方法应由 PriceBandDistributionWriteBackServiceImpl 实现
-        throw new UnsupportedOperationException(
-                "StandardDistributionWriteBackServiceImpl 不支持价位段自选投放的批量写回，请使用 PriceBandDistributionWriteBackServiceImpl");
     }
 
     /**
@@ -272,10 +258,8 @@ public class StandardDistributionWriteBackServiceImpl implements DistributionWri
             d.setMonth(month);
             d.setWeekSeq(weekSeq);
         });
-        QueryWrapper<CigaretteDistributionPredictionPO> qw = new QueryWrapper<>();
-        qw.eq("YEAR", year).eq("MONTH", month).eq("WEEK_SEQ", weekSeq)
-                .eq("CIG_CODE", cigCode).eq("CIG_NAME", cigName);
-        predictionRepository.delete(qw);
+        // 使用精确删除方法，减少锁范围
+        predictionRepository.deleteByCigarette(year, month, weekSeq, cigCode, cigName);
         return predictionRepository.batchUpsert(predictionDataList);
     }
 

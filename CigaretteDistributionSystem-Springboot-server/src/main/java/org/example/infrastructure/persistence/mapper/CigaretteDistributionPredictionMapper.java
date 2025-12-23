@@ -126,6 +126,68 @@ public interface CigaretteDistributionPredictionMapper extends BaseMapper<Cigare
     int deleteByYearMonthWeekSeq(@Param("year") Integer year,
                                  @Param("month") Integer month,
                                  @Param("weekSeq") Integer weekSeq);
+
+    /**
+     * 删除指定卷烟的所有区域记录
+     *
+     * @param year    年
+     * @param month   月
+     * @param weekSeq 周序
+     * @param cigCode 卷烟代码
+     * @param cigName 卷烟名称
+     * @return 删除行数
+     */
+    int deleteByCigarette(@Param("year") Integer year,
+                          @Param("month") Integer month,
+                          @Param("weekSeq") Integer weekSeq,
+                          @Param("cigCode") String cigCode,
+                          @Param("cigName") String cigName);
+
+    /**
+     * 删除指定卷烟的特定区域记录
+     *
+     * @param year         年
+     * @param month        月
+     * @param weekSeq      周序
+     * @param cigCode      卷烟代码
+     * @param cigName      卷烟名称
+     * @param deliveryArea 投放区域
+     * @return 删除行数
+     */
+    int deleteByDeliveryArea(@Param("year") Integer year,
+                             @Param("month") Integer month,
+                             @Param("weekSeq") Integer weekSeq,
+                             @Param("cigCode") String cigCode,
+                             @Param("cigName") String cigName,
+                             @Param("deliveryArea") String deliveryArea);
+
+    /**
+     * 统计指定卷烟的区域记录数
+     *
+     * @param year    年
+     * @param month   月
+     * @param weekSeq 周序
+     * @param cigCode 卷烟代码
+     * @param cigName 卷烟名称
+     * @return 区域记录数
+     */
+    int countByCigarette(@Param("year") Integer year,
+                         @Param("month") Integer month,
+                         @Param("weekSeq") Integer weekSeq,
+                         @Param("cigCode") String cigCode,
+                         @Param("cigName") String cigName);
+
+    /**
+     * 查询指定分区的不重复投放组合
+     *
+     * @param year    年
+     * @param month   月
+     * @param weekSeq 周序
+     * @return 投放组合列表，包含 DELIVERY_METHOD、DELIVERY_ETYPE、TAG 字段
+     */
+    List<Map<String, Object>> findDistinctCombinations(@Param("year") Integer year,
+                                                       @Param("month") Integer month,
+                                                       @Param("weekSeq") Integer weekSeq);
 }
 
 

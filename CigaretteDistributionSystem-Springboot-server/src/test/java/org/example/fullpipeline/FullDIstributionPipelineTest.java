@@ -1,10 +1,10 @@
 package org.example.fullpipeline;
 
 import lombok.extern.slf4j.Slf4j;
-import org.example.application.dto.GenerateDistributionPlanRequestDto;
-import org.example.application.dto.GenerateDistributionPlanResponseDto;
-import org.example.application.dto.TotalActualDeliveryResponseDto;
-import org.example.application.service.calculate.DistributionCalculateService;
+import org.example.application.dto.allocation.GenerateDistributionPlanRequestDto;
+import org.example.application.dto.allocation.GenerateDistributionPlanResponseDto;
+import org.example.application.dto.allocation.TotalActualDeliveryResponseDto;
+import org.example.application.service.calculate.StandardAllocationService;
 import org.example.application.service.coordinator.RegionCustomerStatisticsBuildService;
 import org.example.domain.repository.FilterCustomerTableRepository;
 import org.example.shared.util.PartitionTableManager;
@@ -43,7 +43,7 @@ public class FullDIstributionPipelineTest {
     private RegionCustomerStatisticsBuildService regionCustomerStatisticsBuildService;
 
     @Autowired
-    private DistributionCalculateService distributionCalculateService;
+    private StandardAllocationService distributionCalculateService;
 
     @Autowired
     private PartitionTableManager partitionTableManager;

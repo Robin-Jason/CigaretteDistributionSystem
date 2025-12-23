@@ -1,6 +1,6 @@
 package org.example.application.service.coordinator;
 
-import org.example.domain.model.tag.TagFilterRule;
+import org.example.domain.model.tag.TagFilter;
 
 import java.util.List;
 import java.util.Map;
@@ -24,7 +24,7 @@ public interface TagExtractionService {
      * @param cigaretteInfo 卷烟投放信息
      * @return 标签过滤规则列表
      */
-    List<TagFilterRule> resolveTagFilters(Map<String, Object> cigaretteInfo);
+    List<TagFilter> resolveTagFilters(Map<String, Object> cigaretteInfo);
 
     /**
      * 将标签与区域名拼接。

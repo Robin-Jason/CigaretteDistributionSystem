@@ -9,7 +9,7 @@ import org.example.domain.repository.FilterCustomerTableRepository;
 import org.example.domain.repository.IntegrityGroupMappingRepository;
 import org.example.application.service.coordinator.TagExtractionService;
 import org.example.domain.model.valueobject.DeliveryExtensionType;
-import org.example.domain.model.tag.TagFilterRule;
+import org.example.domain.model.tag.TagFilter;
 import org.example.infrastructure.config.encoding.EncodingRuleRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -71,7 +71,7 @@ public class RegionRecordBuilder {
      * @return 区域客户数统计记录列表
      */
     public List<RegionCustomerRecord> buildRecordsForCombination(
-            String deliveryMethod, String deliveryEtype, List<TagFilterRule> tagRules,
+            String deliveryMethod, String deliveryEtype, List<TagFilter> tagRules,
             Integer year, Integer month, Integer weekSeq) {
 
         CombinationStrategyAnalyzer.CombinationStrategy strategy = strategyAnalyzer.analyzeCombination(deliveryMethod, deliveryEtype);
@@ -102,7 +102,7 @@ public class RegionRecordBuilder {
      * @return 区域客户数统计记录列表
      */
     public List<RegionCustomerRecord> buildRecordsForFullCity(
-            Integer year, Integer month, Integer weekSeq, List<TagFilterRule> tagRules) {
+            Integer year, Integer month, Integer weekSeq, List<TagFilter> tagRules) {
         return buildRecordsWithTags(REGION_FULL_CITY, year, month, weekSeq, Collections.emptyMap(), tagRules);
     }
 
@@ -126,7 +126,7 @@ public class RegionRecordBuilder {
     public List<RegionCustomerRecord> buildRecordsForExtensions(
             List<DeliveryExtensionType> extensionTypes,
             Integer year, Integer month, Integer weekSeq,
-            List<TagFilterRule> tagRules) {
+            List<TagFilter> tagRules) {
 
         List<RegionCustomerRecord> records = new ArrayList<>();
         DeliveryExtensionType primaryType = strategyAnalyzer.determinePrimaryExtension(extensionTypes);
@@ -389,7 +389,7 @@ public class RegionRecordBuilder {
             String baseRegionName,
             Integer year, Integer month, Integer weekSeq,
             Map<String, String> filters,
-            List<TagFilterRule> tagRules) {
+            List<TagFilter> tagRules) {
 
         List<RegionCustomerRecord> records = new ArrayList<>();
         if (tagRules == null || tagRules.isEmpty()) {
@@ -401,7 +401,7 @@ public class RegionRecordBuilder {
             return records;
         }
 
-        for (TagFilterRule rule : tagRules) {
+        for (TagFilter rule : tagRules) {
             String regionName = tagExtractionService.combineRegionWithTag(baseRegionName, rule.getTagName());
             RegionCustomerRecord record =
                     buildRecordForRegion(regionName, year, month, weekSeq, filters, rule);
@@ -426,7 +426,7 @@ public class RegionRecordBuilder {
     public RegionCustomerRecord buildRecordForRegion(
             String regionName,
             Integer year, Integer month, Integer weekSeq,
-            Map<String, String> filters, TagFilterRule tagRule) {
+            Map<String, String> filters, TagFilter tagRule) {
 
         List<Map<String, Object>> gradeStats = filterCustomerTableRepository.statGradesPartition(
                 year, month, weekSeq, filters,

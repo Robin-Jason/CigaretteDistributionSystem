@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.application.service.coordinator.RegionCustomerStatisticsBuildService;
 import org.example.application.service.coordinator.TagExtractionService;
-import org.example.domain.model.tag.TagFilterRule;
+import org.example.domain.model.tag.TagFilter;
 import org.example.domain.repository.CigaretteDistributionInfoRepository;
 import org.example.domain.repository.RegionCustomerStatisticsRepository;
 import org.example.shared.exception.RegionNoCustomerException;
@@ -41,7 +41,7 @@ public class RegionCustomerStatisticsBuildServiceImpl implements RegionCustomerS
     /**
      * 构建全量区域客户数表
      * 
-     * 使用 REQUIRES_NEW 传播级别，确保在独立事务中运行，避免嵌套事务导致的表锁问题
+     * 使用 REQUIRED 传播级别，加入调用方事务
      * 
      * @param year 年份
      * @param month 月份
@@ -49,7 +49,7 @@ public class RegionCustomerStatisticsBuildServiceImpl implements RegionCustomerS
      * @deprecated temporaryTableName 参数已删除，系统现在只使用分区表
      */
     @Override
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> buildRegionCustomerStatistics(Integer year, Integer month, Integer weekSeq) {
         log.info("开始构建区域客户数统计表: {}-{}-{}, 使用分区表(customer_filter)", year, month, weekSeq);
         
@@ -79,7 +79,7 @@ public class RegionCustomerStatisticsBuildServiceImpl implements RegionCustomerS
                 String deliveryEtype = getStringValue(combination, "DELIVERY_ETYPE");
                 log.debug("处理投放组合: DELIVERY_METHOD={}, DELIVERY_ETYPE={}", deliveryMethod, deliveryEtype);
 
-                List<TagFilterRule> tagRules = tagExtractionService.resolveTagFilters(combination);
+                List<TagFilter> tagRules = tagExtractionService.resolveTagFilters(combination);
 
                 try {
                 // 使用分区表

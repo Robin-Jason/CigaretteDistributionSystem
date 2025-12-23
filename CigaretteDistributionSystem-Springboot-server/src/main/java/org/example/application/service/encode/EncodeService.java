@@ -6,7 +6,7 @@ import java.util.List;
 
 /**
  * 语义编码服务（精简版）。
- * 仅保留“一键生成分配方案”流程所需的区域编码能力。
+ * 仅保留"一键生成分配方案"流程所需的区域编码能力。
  *
  * @author Robin
  * @version 4.1
@@ -16,6 +16,9 @@ public interface EncodeService {
 
     /**
      * 为特定区域生成编码表达式（单卷烟单区域）。
+     * <p>
+     * 支持所有投放方式：按档位投放(A)、按档位扩展投放(B)、按价位段自选投放(C)等。
+     * </p>
      *
      * @param cigCode             卷烟代码
      * @param cigName             卷烟名称
@@ -28,5 +31,3 @@ public interface EncodeService {
     String encodeForSpecificArea(String cigCode, String cigName, String deliveryMethod, String deliveryEtype,
                                  String targetArea, List<CigaretteDistributionPredictionPO> allCigaretteRecords);
 }
-
-

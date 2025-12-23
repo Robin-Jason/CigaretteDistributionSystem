@@ -1,5 +1,7 @@
 package org.example.domain.service.algorithm;
 
+import org.example.domain.model.valueobject.GradeRange;
+
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -20,10 +22,12 @@ public interface SingleLevelDistributionService {
      * @param targetRegions        区域列表（顺序与结果矩阵行对应）
      * @param regionCustomerMatrix 区域客户数矩阵，维度 [regionCount][30]
      * @param targetAmount         预投放量
-     * @return 分配矩阵，维度与输入一致
+     * @param gradeRange           档位范围，指定计算范围（HG到LG），为null时使用默认范围（D30-D1）
+     * @return 分配矩阵，维度 [regionCount][30]，范围外列为0
      */
     BigDecimal[][] distribute(List<String> targetRegions,
                               BigDecimal[][] regionCustomerMatrix,
-                              BigDecimal targetAmount);
+                              BigDecimal targetAmount,
+                              GradeRange gradeRange);
 }
 

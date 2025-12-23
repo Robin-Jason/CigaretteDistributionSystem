@@ -1,5 +1,6 @@
 package org.example.domain.service.algorithm.impl;
 
+import org.example.domain.model.valueobject.GradeRange;
 import org.example.domain.service.algorithm.ColumnWiseAdjustmentService;
 
 import java.math.BigDecimal;
@@ -28,6 +29,7 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
     public BigDecimal[][] distribute(List<String> segments,
                                      BigDecimal[][] customerMatrix,
                                      BigDecimal targetAmount,
+                                     GradeRange gradeRange,
                                      Comparator<Integer> segmentComparator) {
         if (segments == null || segments.isEmpty()
                 || customerMatrix == null
@@ -36,13 +38,18 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
             return new BigDecimal[0][0];
         }
 
+        // 处理 null 参数，使用默认范围
+        GradeRange range = gradeRange != null ? gradeRange : GradeRange.full();
+        int maxIndex = range.getMaxIndex();
+        int minIndex = range.getMinIndex();
+
         validateMatrixDimensions(segments.size(), customerMatrix);
 
-        // 防御性检查：如果存在某个区域30个档位客户数全部为0，则该卷烟无法进行有效分配
+        // 防御性检查：如果存在某个区域在范围内所有档位客户数全部为0，则该卷烟无法进行有效分配
         for (int r = 0; r < customerMatrix.length; r++) {
             BigDecimal[] row = customerMatrix[r];
             boolean allZero = true;
-            for (int g = 0; g < row.length; g++) {
+            for (int g = maxIndex; g <= minIndex && g < row.length; g++) {
                 if (row[g] != null && row[g].compareTo(BigDecimal.ZERO) > 0) {
                     allZero = false;
                     break;
@@ -50,16 +57,13 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
             }
             if (allZero) {
                 throw new IllegalStateException(
-                        "ColumnWise 分配失败：区域索引 " + r + " 的30个档位客户数全部为0，已停止本卷烟分配以避免死循环");
+                        "ColumnWise 分配失败：区域索引 " + r + " 在档位范围内客户数全部为0，已停止本卷烟分配以避免死循环");
             }
         }
 
         try {
-            // 执行新算法
-            BigDecimal[][] result = distributeMultiRegion(segments.size(), customerMatrix, targetAmount, segmentComparator);
-            
-            // 强制执行单调性约束作为双重保险
-            enforceMonotonicConstraint(result);
+            // 执行新算法，只在 maxIndex ~ minIndex 范围内计算
+            BigDecimal[][] result = distributeMultiRegion(segments.size(), customerMatrix, targetAmount, segmentComparator, maxIndex, minIndex);
             
             return result;
         } catch (Exception ex) {
@@ -75,14 +79,18 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
      * @param customerMatrix 客户数矩阵
      * @param targetAmount 目标预投放量
      * @param segmentComparator 区域比较器（用于排序）
+     * @param maxIndex HG索引
+     * @param minIndex LG索引
      * @return 分配结果矩阵
      */
     private BigDecimal[][] distributeMultiRegion(int segmentCount,
                                                   BigDecimal[][] customerMatrix,
                                                   BigDecimal targetAmount,
-                                                  Comparator<Integer> segmentComparator) {
+                                                  Comparator<Integer> segmentComparator,
+                                                  int maxIndex,
+                                                  int minIndex) {
         // 1. 粗调阶段（候选方案1）
-        BigDecimal[][] candidate1 = coarseAdjustment(segmentCount, customerMatrix, targetAmount);
+        BigDecimal[][] candidate1 = coarseAdjustment(segmentCount, customerMatrix, targetAmount, maxIndex, minIndex);
         BigDecimal amount1 = calculateTotalAmount(candidate1, customerMatrix);
         BigDecimal error1 = targetAmount.subtract(amount1).abs();
         
@@ -93,7 +101,7 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
         
         // 2. 高档位微调阶段
         // 撤销粗调方案最后一次档位列+1操作作为候选方案2
-        BigDecimal[][] candidate2 = rollbackLastColumnIncrement(candidate1, customerMatrix, targetAmount);
+        BigDecimal[][] candidate2 = rollbackLastColumnIncrement(candidate1, customerMatrix, targetAmount, maxIndex, minIndex);
         BigDecimal amount2 = calculateTotalAmount(candidate2, customerMatrix);
         BigDecimal error2 = targetAmount.subtract(amount2).abs();
         
@@ -107,7 +115,7 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
         // 迭代微调：每轮基于当前余量做一次完整的HG→LG填充，终止条件为余量 < HG档位列客户总数
         int refineIterations = 0;
         BigDecimal currentAmount = amount2;
-        final BigDecimal hgColumnIncrement = calculateColumnIncrement(customerMatrix, 0);
+        final BigDecimal hgColumnIncrement = calculateColumnIncrement(customerMatrix, maxIndex);
 
         while (true) {
             if (++refineIterations > 10_000_000) {
@@ -122,16 +130,16 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
                     error3 = targetAmount.subtract(amount3).abs();
 
                     // 旧候选方案4：HG整列+1
-                    if (canIncrementColumn(candidate2, 0)) {
+                    if (canIncrementColumn(candidate2, maxIndex)) {
                         candidate4 = deepCopy(candidate2);
-                        addFullColumn(candidate4, 0);
+                        addFullColumn(candidate4, maxIndex);
                         BigDecimal amount4 = currentAmount.add(hgColumnIncrement);
                         error4 = targetAmount.subtract(amount4).abs();
                     }
 
                     // 新候选方案5：基于候选3在HG列选择部分区域+1，使误差尽量缩小（0-1背包 / 子集和）
                     HgSubsetCandidate4Result subsetResult =
-                            generateHgSubsetCandidate4(candidate3, customerMatrix, remainder, currentAmount, targetAmount);
+                            generateHgSubsetCandidate4(candidate3, customerMatrix, remainder, currentAmount, targetAmount, maxIndex);
                     if (subsetResult != null && subsetResult.matrix != null && subsetResult.error != null) {
                         candidate5 = subsetResult.matrix;
                         error5 = subsetResult.error;
@@ -141,7 +149,7 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
             }
 
             ColumnFillResult iterationResult = runColumnFillIteration(
-                    candidate2, customerMatrix, targetAmount, currentAmount);
+                    candidate2, customerMatrix, targetAmount, currentAmount, maxIndex, minIndex);
 
             if (!iterationResult.progressMade) {
                 break;
@@ -221,17 +229,22 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
      * @param segmentCount 区域数量
      * @param customerMatrix 客户数矩阵
      * @param targetAmount 目标预投放量
+     * @param maxIndex HG索引
+     * @param minIndex LG索引
      * @return 粗调后的分配矩阵（候选方案1）
      */
     private BigDecimal[][] coarseAdjustment(int segmentCount,
                                             BigDecimal[][] customerMatrix,
-                                            BigDecimal targetAmount) {
+                                            BigDecimal targetAmount,
+                                            int maxIndex,
+                                            int minIndex) {
         BigDecimal[][] allocationMatrix = initMatrix(segmentCount);
         BigDecimal currentAmount = BigDecimal.ZERO;
 
         while (true) {
             boolean hasProgress = false;
-            for (int grade = 0; grade < GRADE_COUNT; grade++) {
+            // 只在 maxIndex ~ minIndex 范围内进行计算
+            for (int grade = maxIndex; grade <= minIndex; grade++) {
                 // 计算该档位列+1的增量（所有区域该档位客户数总和）
                 BigDecimal gradeIncrement = BigDecimal.ZERO;
                 for (int segment = 0; segment < segmentCount; segment++) {
@@ -270,18 +283,22 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
      * @param allocationMatrix 当前分配矩阵
      * @param customerMatrix 客户数矩阵
      * @param targetAmount 目标预投放量
+     * @param maxIndex HG索引
+     * @param minIndex LG索引
      * @return 撤销后的分配矩阵
      */
     private BigDecimal[][] rollbackLastColumnIncrement(BigDecimal[][] allocationMatrix,
                                           BigDecimal[][] customerMatrix,
-                                                       BigDecimal targetAmount) {
+                                                       BigDecimal targetAmount,
+                                                       int maxIndex,
+                                                       int minIndex) {
         BigDecimal[][] result = deepCopy(allocationMatrix);
         int segmentCount = result.length;
         // 先整体计算一次当前实际投放量，后续用增量方式更新，避免每次尝试都整矩阵重算
         BigDecimal currentAmount = calculateTotalAmount(result, customerMatrix);
 
-        // 从低档位到高档位查找最后一次整列+1操作
-        for (int grade = GRADE_COUNT - 1; grade >= 0; grade--) {
+        // 从低档位到高档位查找最后一次整列+1操作（只在范围内查找）
+        for (int grade = minIndex; grade >= maxIndex; grade--) {
             // 检查该档位是否所有区域都有分配值
             boolean allHaveValue = true;
             BigDecimal gradeIncrement = BigDecimal.ZERO;
@@ -321,7 +338,9 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
     private ColumnFillResult runColumnFillIteration(BigDecimal[][] baseMatrix,
                                                    BigDecimal[][] customerMatrix,
                                                    BigDecimal targetAmount,
-                                                    BigDecimal startAmount) {
+                                                    BigDecimal startAmount,
+                                                    int maxIndex,
+                                                    int minIndex) {
         ColumnFillResult result = new ColumnFillResult();
         BigDecimal[][] working = deepCopy(baseMatrix);
         BigDecimal currentAmount = startAmount;
@@ -329,7 +348,8 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
 
         while (true) {
             boolean roundProgress = false;
-            for (int grade = 0; grade < GRADE_COUNT; grade++) {
+            // 只在 maxIndex ~ minIndex 范围内进行计算
+            for (int grade = maxIndex; grade <= minIndex; grade++) {
                 if (!canIncrementColumn(working, grade)) {
                     continue;
                 }
@@ -377,19 +397,6 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
      * 
      * @param matrix 分配矩阵
      */
-    private void enforceMonotonicConstraint(BigDecimal[][] matrix) {
-        for (BigDecimal[] row : matrix) {
-            if (row == null) {
-                continue;
-            }
-            for (int grade = 1; grade < GRADE_COUNT && grade < row.length; grade++) {
-                if (row[grade].compareTo(row[grade - 1]) > 0) {
-                    row[grade] = row[grade - 1];  // 强制调整
-                }
-            }
-        }
-    }
-
     private void addFullColumn(BigDecimal[][] matrix, int grade) {
         for (BigDecimal[] row : matrix) {
             row[grade] = row[grade].add(BigDecimal.ONE);
@@ -445,14 +452,15 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
     }
 
     /**
-     * 基于候选方案3，在HG列（grade=0）选择部分区域+1，使得总增量尽量贴近当前余量 remainder。
+     * 基于候选方案3，在HG列选择部分区域+1，使得总增量尽量贴近当前余量 remainder。
      * 这是一个典型的 0-1 背包 / 子集和问题：每个区域的"重量"为该区域 HG 档客户数。
      */
     private HgSubsetCandidate4Result generateHgSubsetCandidate4(BigDecimal[][] baseMatrix,
                                                                 BigDecimal[][] customerMatrix,
                                                                 BigDecimal remainder,
                                                                 BigDecimal currentAmount,
-                                                                BigDecimal targetAmount) {
+                                                                BigDecimal targetAmount,
+                                                                int maxIndex) {
         if (remainder == null || remainder.compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
@@ -473,7 +481,7 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
         long maxWeight = 0L;
         boolean[] zeroWeightEligible = new boolean[segmentCount]; // HG客户数为0但可+1且不影响单调性的区域
         for (int s = 0; s < segmentCount; s++) {
-            BigDecimal customerCount = customerMatrix[s][0];
+            BigDecimal customerCount = customerMatrix[s][maxIndex];
 
             // HG 客户数为 0 的区域：本轮在 DP 中视为"零权重物品"，不参与子集和搜索，
             // 但在构造最终候选方案时会无成本地一起 +1。
@@ -559,13 +567,13 @@ public class ColumnWiseAdjustmentServiceImpl implements ColumnWiseAdjustmentServ
         BigDecimal[][] candidate4 = deepCopy(baseMatrix);
         for (int s = 0; s < segmentCount; s++) {
             if (chosen[s]) {
-                candidate4[s][0] = candidate4[s][0].add(BigDecimal.ONE);
+                candidate4[s][maxIndex] = candidate4[s][maxIndex].add(BigDecimal.ONE);
             }
         }
         // 对所有 HG客户数为0 且可+1的区域，同样无成本地+1，以尽可能多覆盖区域
         for (int s = 0; s < segmentCount; s++) {
             if (zeroWeightEligible[s]) {
-                candidate4[s][0] = candidate4[s][0].add(BigDecimal.ONE);
+                candidate4[s][maxIndex] = candidate4[s][maxIndex].add(BigDecimal.ONE);
             }
         }
 

@@ -1,10 +1,11 @@
 package org.example.fullpipeline;
 
 import lombok.extern.slf4j.Slf4j;
-import org.example.application.dto.GenerateDistributionPlanRequestDto;
-import org.example.application.dto.GenerateDistributionPlanResponseDto;
-import org.example.application.dto.TotalActualDeliveryResponseDto;
-import org.example.application.service.calculate.DistributionCalculateService;
+import org.example.application.dto.allocation.GenerateDistributionPlanRequestDto;
+import org.example.application.dto.allocation.GenerateDistributionPlanResponseDto;
+import org.example.application.dto.allocation.TotalActualDeliveryResponseDto;
+import org.example.application.service.calculate.StandardAllocationService;
+import org.example.application.service.calculate.UnifiedAllocationService;
 import org.example.application.service.coordinator.RegionCustomerStatisticsBuildService;
 import org.example.domain.repository.FilterCustomerTableRepository;
 import org.example.shared.util.PartitionTableManager;
@@ -40,7 +41,10 @@ public class Week4FullPipelineTest {
     private RegionCustomerStatisticsBuildService regionCustomerStatisticsBuildService;
 
     @Autowired
-    private DistributionCalculateService distributionCalculateService;
+    private StandardAllocationService standardAllocationService;
+
+    @Autowired
+    private UnifiedAllocationService unifiedAllocationService;
 
     @Autowired
     private PartitionTableManager partitionTableManager;
@@ -168,7 +172,7 @@ public class Week4FullPipelineTest {
         planRequest.setMonth(MONTH);
         planRequest.setWeekSeq(WEEK_SEQ);
         
-        GenerateDistributionPlanResponseDto planResponse = distributionCalculateService.generateDistributionPlan(planRequest);
+        GenerateDistributionPlanResponseDto planResponse = unifiedAllocationService.generateDistributionPlan(planRequest);
         
         if (planResponse == null || !Boolean.TRUE.equals(planResponse.getSuccess())) {
             String errorMsg = planResponse != null ? planResponse.getMessage() : "返回结果为空";
@@ -185,7 +189,7 @@ public class Week4FullPipelineTest {
         
         // 3.2 计算总实际投放量（验证分配结果）
         log.info("计算总实际投放量...");
-        TotalActualDeliveryResponseDto totalResponse = distributionCalculateService.calculateTotalActualDelivery(YEAR, MONTH, WEEK_SEQ);
+        TotalActualDeliveryResponseDto totalResponse = standardAllocationService.calculateTotalActualDelivery(YEAR, MONTH, WEEK_SEQ);
         
         if (totalResponse == null || !Boolean.TRUE.equals(totalResponse.getSuccess())) {
             String errorMsg = totalResponse != null ? totalResponse.getMessage() : "返回结果为空";

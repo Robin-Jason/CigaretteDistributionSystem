@@ -22,6 +22,12 @@ import java.util.List;
 public class PriceBandRuleProperties {
 
     /**
+     * 订购量计算阈值，用于计算价位段订购量上限。
+     * 默认值为 1.3
+     */
+    private BigDecimal orderLimitThreshold = new BigDecimal("1.3");
+
+    /**
      * 价位段配置列表。
      */
     private List<PriceBandConfig> priceBands = new ArrayList<>();

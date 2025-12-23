@@ -17,7 +17,7 @@
     </select>
 
     <!-- 单条 UPSERT -->
-    <insert id="upsert" parameterType="org.example.infrastructure.persistence.po.CigaretteDistributionPredictionPO">
+    <insert id="upsert" parameterType="org.example.infrastructure.persistence.po.CigaretteDistributionPredictionPricePO">
         INSERT INTO `cigarette_distribution_prediction_price`
         (YEAR, MONTH, WEEK_SEQ, CIG_CODE, CIG_NAME, DELIVERY_AREA, DELIVERY_METHOD, DELIVERY_ETYPE, TAG, TAG_FILTER_CONFIG,
          D30, D29, D28, D27, D26, D25, D24, D23, D22, D21,
@@ -79,7 +79,7 @@
     </insert>
 
     <!-- 全字段定点更新 -->
-    <update id="updateOne" parameterType="org.example.infrastructure.persistence.po.CigaretteDistributionPredictionPO">
+    <update id="updateOne" parameterType="org.example.infrastructure.persistence.po.CigaretteDistributionPredictionPricePO">
         UPDATE `cigarette_distribution_prediction_price`
         SET DELIVERY_AREA     = #{deliveryArea},
             DELIVERY_METHOD   = #{deliveryMethod},
@@ -157,6 +157,58 @@
           AND WEEK_SEQ = #{weekSeq}
           AND DELIVERY_METHOD = #{deliveryMethod}
     </delete>
+
+    <!-- 删除指定卷烟的特定区域记录 -->
+    <delete id="deleteByDeliveryArea">
+        DELETE FROM `cigarette_distribution_prediction_price`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND CIG_CODE = #{cigCode}
+          AND CIG_NAME = #{cigName}
+          AND DELIVERY_AREA = #{deliveryArea}
+    </delete>
+
+    <!-- 统计指定卷烟的区域记录数 -->
+    <select id="countByCigarette" resultType="int">
+        SELECT COUNT(*)
+        FROM `cigarette_distribution_prediction_price`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND CIG_CODE = #{cigCode}
+          AND CIG_NAME = #{cigName}
+    </select>
+
+    <!-- 查询指定分区内按价位段自选投放的分配结果（联表获取价位段信息） -->
+    <select id="findPriceBandAllocations" resultType="map">
+        SELECT p.CIG_CODE, p.CIG_NAME, i.PRICE_BAND,
+               p.D30, p.D29, p.D28, p.D27, p.D26, p.D25, p.D24, p.D23, p.D22, p.D21,
+               p.D20, p.D19, p.D18, p.D17, p.D16, p.D15, p.D14, p.D13, p.D12, p.D11,
+               p.D10, p.D9, p.D8, p.D7, p.D6, p.D5, p.D4, p.D3, p.D2, p.D1
+        FROM `cigarette_distribution_prediction_price` p
+        INNER JOIN `cigarette_distribution_info` i
+          ON p.YEAR = i.YEAR
+         AND p.MONTH = i.MONTH
+         AND p.WEEK_SEQ = i.WEEK_SEQ
+         AND p.CIG_CODE = i.CIG_CODE
+         AND p.CIG_NAME = i.CIG_NAME
+        WHERE p.YEAR = #{year}
+          AND p.MONTH = #{month}
+          AND p.WEEK_SEQ = #{weekSeq}
+          AND p.DELIVERY_METHOD = '按价位段自选投放'
+        ORDER BY i.PRICE_BAND, p.CIG_CODE
+    </select>
+
+    <!-- 查询指定分区的不重复投放组合 -->
+    <select id="findDistinctCombinations" resultType="map">
+        SELECT DISTINCT DELIVERY_METHOD, DELIVERY_ETYPE, TAG
+        FROM `cigarette_distribution_prediction_price`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+        ORDER BY DELIVERY_METHOD, DELIVERY_ETYPE, TAG
+    </select>
 
 </mapper>
 

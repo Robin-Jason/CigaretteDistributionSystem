@@ -119,5 +119,73 @@ public class CigaretteDistributionPredictionRepositoryImpl implements CigaretteD
         log.info("删除预测数据完成: {}-{}-{}, 删除 {} 条记录", year, month, weekSeq, count);
         return count;
     }
+
+    /**
+     * 删除指定卷烟的所有区域记录
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @param cigCode 卷烟代码
+     * @param cigName 卷烟名称
+     * @return 删除行数
+     */
+    @Override
+    public int deleteByCigarette(Integer year, Integer month, Integer weekSeq, String cigCode, String cigName) {
+        log.debug("删除卷烟预测数据: {}-{}-{}, 卷烟: {}-{}", year, month, weekSeq, cigCode, cigName);
+        int count = predictionMapper.deleteByCigarette(year, month, weekSeq, cigCode, cigName);
+        log.info("删除卷烟预测数据完成: {}-{}-{}, 卷烟: {}-{}, 删除 {} 条记录", year, month, weekSeq, cigCode, cigName, count);
+        return count;
+    }
+
+    /**
+     * 删除指定卷烟的特定区域记录
+     *
+     * @param year         年份
+     * @param month        月份
+     * @param weekSeq      周序号
+     * @param cigCode      卷烟代码
+     * @param cigName      卷烟名称
+     * @param deliveryArea 投放区域
+     * @return 删除行数
+     */
+    @Override
+    public int deleteByDeliveryArea(Integer year, Integer month, Integer weekSeq, String cigCode, String cigName, String deliveryArea) {
+        log.debug("删除卷烟特定区域预测数据: {}-{}-{}, 卷烟: {}-{}, 区域: {}", year, month, weekSeq, cigCode, cigName, deliveryArea);
+        int count = predictionMapper.deleteByDeliveryArea(year, month, weekSeq, cigCode, cigName, deliveryArea);
+        log.info("删除卷烟特定区域预测数据完成: {}-{}-{}, 卷烟: {}-{}, 区域: {}, 删除 {} 条记录", year, month, weekSeq, cigCode, cigName, deliveryArea, count);
+        return count;
+    }
+
+    /**
+     * 统计指定卷烟的区域记录数
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @param cigCode 卷烟代码
+     * @param cigName 卷烟名称
+     * @return 区域记录数
+     */
+    @Override
+    public int countByCigarette(Integer year, Integer month, Integer weekSeq, String cigCode, String cigName) {
+        return predictionMapper.countByCigarette(year, month, weekSeq, cigCode, cigName);
+    }
+
+    /**
+     * 查询指定分区的不重复投放组合
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @return 投放组合列表
+     */
+    @Override
+    public List<Map<String, Object>> findDistinctCombinations(Integer year, Integer month, Integer weekSeq) {
+        partitionTableManager.ensurePartitionExists(TABLE_NAME, year, month, weekSeq);
+        List<Map<String, Object>> result = predictionMapper.findDistinctCombinations(year, month, weekSeq);
+        log.debug("查询不重复投放组合: {}-{}-{}, 返回 {} 条记录", year, month, weekSeq, result.size());
+        return result;
+    }
 }
 

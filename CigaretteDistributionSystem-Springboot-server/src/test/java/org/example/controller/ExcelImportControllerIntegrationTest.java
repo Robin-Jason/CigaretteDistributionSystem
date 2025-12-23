@@ -1,6 +1,7 @@
 package org.example.controller;
 
-import org.example.application.dto.DataImportRequestDto;
+import org.example.application.dto.importing.BaseCustomerInfoImportRequestDto;
+import org.example.application.dto.importing.CigaretteImportRequestDto;
 import org.example.application.service.importing.ExcelImportService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -14,11 +15,11 @@ import java.nio.file.Paths;
 import java.util.Map;
 
 /**
- * Excel 导入统一接口集成测试
+ * Excel 导入接口集成测试
  *
- * 覆盖两种场景：
- * 1) 客户基础信息表 + 卷烟投放基础信息表同时导入（全量模式）
- * 2) 仅导入卷烟投放基础信息表（客户表缺省）
+ * 覆盖两个独立导入场景：
+ * 1) 客户基础信息表导入（返回诚信互助小组映射）
+ * 2) 卷烟投放基础信息表导入
  */
 @SpringBootTest
 public class ExcelImportControllerIntegrationTest {
@@ -33,34 +34,29 @@ public class ExcelImportControllerIntegrationTest {
     }
 
     @Test
-    void importWithBothFiles_shouldSucceed() throws Exception {
-        DataImportRequestDto req = new DataImportRequestDto();
-        req.setBaseCustomerInfoFile(loadFile("base_customer_info.xlsx"));
-        req.setCigaretteDistributionInfoFile(loadFile("cigarette_distribution_info.xlsx"));
-        req.setYear(2025);
-        req.setMonth(9);
-        req.setWeekSeq(3);
+    void importBaseCustomerInfo_shouldSucceedAndReturnIntegrityGroupMapping() throws Exception {
+        BaseCustomerInfoImportRequestDto req = new BaseCustomerInfoImportRequestDto();
+        req.setFile(loadFile("base_customer_info.xlsx"));
 
-        Map<String, Object> result = excelImportService.importData(req);
-        Assertions.assertTrue(Boolean.TRUE.equals(result.get("success")), "Import should succeed with both files");
-        Assertions.assertTrue(result.containsKey("baseCustomerInfoResult"), "Base customer result should exist");
-        Assertions.assertTrue(result.containsKey("cigaretteDistributionInfoResult"), "Cigarette result should exist");
+        Map<String, Object> result = excelImportService.importBaseCustomerInfo(req);
+        Assertions.assertTrue(Boolean.TRUE.equals(result.get("success")), "Import should succeed");
+        Assertions.assertTrue(result.containsKey("integrityGroupMapping"), "Should return integrityGroupMapping");
+        
+        @SuppressWarnings("unchecked")
+        Map<String, Object> mapping = (Map<String, Object>) result.get("integrityGroupMapping");
+        Assertions.assertTrue((Boolean) mapping.get("updated"), "Mapping should be marked as updated");
     }
 
     @Test
-    void importWithOnlyCigaretteFile_shouldSkipBaseAndSucceed() throws Exception {
-        DataImportRequestDto req = new DataImportRequestDto();
-        req.setCigaretteDistributionInfoFile(loadFile("cigarette_distribution_info.xlsx"));
+    void importCigaretteDistributionInfo_shouldSucceed() throws Exception {
+        CigaretteImportRequestDto req = new CigaretteImportRequestDto();
+        req.setFile(loadFile("cigarette_distribution_info.xlsx"));
         req.setYear(2025);
         req.setMonth(9);
         req.setWeekSeq(3);
 
-        Map<String, Object> result = excelImportService.importData(req);
-        Assertions.assertTrue(Boolean.TRUE.equals(result.get("success")), "Import should succeed without base file");
-        Assertions.assertTrue(result.containsKey("baseCustomerInfoResult"), "Base customer result should be present");
-        Object baseMsg = result.get("baseCustomerInfoResult");
-        Assertions.assertNotNull(baseMsg, "Base customer result should not be null even when skipped");
+        Map<String, Object> result = excelImportService.importCigaretteDistributionInfo(req);
+        Assertions.assertTrue(Boolean.TRUE.equals(result.get("success")), "Import should succeed");
+        Assertions.assertTrue(result.containsKey("insertedCount"), "Should return insertedCount");
     }
 }
-
-

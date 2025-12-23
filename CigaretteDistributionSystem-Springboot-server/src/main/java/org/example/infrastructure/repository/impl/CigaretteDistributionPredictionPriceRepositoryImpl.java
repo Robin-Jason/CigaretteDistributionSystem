@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.domain.repository.CigaretteDistributionPredictionPriceRepository;
 import org.example.infrastructure.persistence.po.CigaretteDistributionPredictionPO;
+import org.example.infrastructure.persistence.po.CigaretteDistributionPredictionPricePO;
 import org.example.infrastructure.persistence.mapper.CigaretteDistributionPredictionPriceMapper;
 import org.example.shared.util.PartitionTableManager;
 import org.springframework.stereotype.Repository;
@@ -33,12 +34,12 @@ public class CigaretteDistributionPredictionPriceRepositoryImpl implements Cigar
     private final PartitionTableManager partitionTableManager;
 
     @Override
-    public int upsert(CigaretteDistributionPredictionPO data) {
+    public int upsert(CigaretteDistributionPredictionPricePO data) {
         return predictionPriceMapper.upsert(data);
     }
 
     @Override
-    public int updateOne(CigaretteDistributionPredictionPO data) {
+    public int updateOne(CigaretteDistributionPredictionPricePO data) {
         return predictionPriceMapper.updateOne(data);
     }
 
@@ -100,7 +101,7 @@ public class CigaretteDistributionPredictionPriceRepositoryImpl implements Cigar
     }
 
     @Override
-    public int batchUpsert(List<CigaretteDistributionPredictionPO> list) {
+    public int batchUpsert(List<? extends CigaretteDistributionPredictionPO> list) {
         if (list == null || list.isEmpty()) {
             log.debug("批量UPSERT预测价格数据: 记录列表为空");
             return 0;
@@ -115,6 +116,72 @@ public class CigaretteDistributionPredictionPriceRepositoryImpl implements Cigar
         int count = predictionPriceMapper.batchUpsert(list);
         log.info("批量UPSERT预测价格数据完成, 插入 {} 条记录", count);
         return count;
+    }
+
+    /**
+     * 删除指定卷烟的特定区域记录
+     *
+     * @param year         年份
+     * @param month        月份
+     * @param weekSeq      周序号
+     * @param cigCode      卷烟代码
+     * @param cigName      卷烟名称
+     * @param deliveryArea 投放区域
+     * @return 删除行数
+     */
+    @Override
+    public int deleteByDeliveryArea(Integer year, Integer month, Integer weekSeq, String cigCode, String cigName, String deliveryArea) {
+        log.debug("删除卷烟特定区域预测价格数据: {}-{}-{}, 卷烟: {}-{}, 区域: {}", year, month, weekSeq, cigCode, cigName, deliveryArea);
+        int count = predictionPriceMapper.deleteByDeliveryArea(year, month, weekSeq, cigCode, cigName, deliveryArea);
+        log.info("删除卷烟特定区域预测价格数据完成: {}-{}-{}, 卷烟: {}-{}, 区域: {}, 删除 {} 条记录", year, month, weekSeq, cigCode, cigName, deliveryArea, count);
+        return count;
+    }
+
+    /**
+     * 统计指定卷烟的区域记录数
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @param cigCode 卷烟代码
+     * @param cigName 卷烟名称
+     * @return 区域记录数
+     */
+    @Override
+    public int countByCigarette(Integer year, Integer month, Integer weekSeq, String cigCode, String cigName) {
+        return predictionPriceMapper.countByCigarette(year, month, weekSeq, cigCode, cigName);
+    }
+
+    /**
+     * 查询指定分区内按价位段自选投放的分配结果
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @return 分配结果列表
+     */
+    @Override
+    public List<Map<String, Object>> findPriceBandAllocations(Integer year, Integer month, Integer weekSeq) {
+        partitionTableManager.ensurePartitionExists(TABLE_NAME, year, month, weekSeq);
+        List<Map<String, Object>> result = predictionPriceMapper.findPriceBandAllocations(year, month, weekSeq);
+        log.debug("查询价位段自选投放分配结果: {}-{}-{}, 返回 {} 条记录", year, month, weekSeq, result.size());
+        return result;
+    }
+
+    /**
+     * 查询指定分区的不重复投放组合
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @return 投放组合列表
+     */
+    @Override
+    public List<Map<String, Object>> findDistinctCombinations(Integer year, Integer month, Integer weekSeq) {
+        partitionTableManager.ensurePartitionExists(TABLE_NAME, year, month, weekSeq);
+        List<Map<String, Object>> result = predictionPriceMapper.findDistinctCombinations(year, month, weekSeq);
+        log.debug("查询不重复投放组合(价格表): {}-{}-{}, 返回 {} 条记录", year, month, weekSeq, result.size());
+        return result;
     }
 }
 

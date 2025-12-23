@@ -1,11 +1,13 @@
 package org.example.api.web.controller;
 
 import lombok.extern.slf4j.Slf4j;
-import org.example.api.web.converter.ExcelImportConverter;
-import org.example.api.web.vo.request.DataImportRequestVo;
+import org.example.api.web.vo.request.BaseCustomerInfoImportRequestVo;
+import org.example.api.web.vo.request.CigaretteImportRequestVo;
 import org.example.api.web.vo.response.ApiResponseVo;
-import org.example.api.web.vo.response.DataImportResponseVo;
-import org.example.application.dto.DataImportRequestDto;
+import org.example.api.web.vo.response.BaseCustomerInfoImportResponseVo;
+import org.example.api.web.vo.response.CigaretteImportResponseVo;
+import org.example.application.dto.importing.BaseCustomerInfoImportRequestDto;
+import org.example.application.dto.importing.CigaretteImportRequestDto;
 import org.example.application.service.importing.ExcelImportService;
 import org.example.shared.util.UploadValidators;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,16 +21,15 @@ import java.util.Map;
  * 数据导入控制器
  *
  * 作用：
- * - 提供统一导入入口：支持卷烟投放基础信息表必传，客户基础信息表可选的组合导入。
- * - 对上传文件做基础校验（是否存在、大小限制），并将结果交由服务层处理。
+ * - 提供客户基础信息表和卷烟投放基础信息表的独立导入接口
  *
- * 特性：
- * - 仅保留统一导入接口 /api/import/data，已移除分表单独导入接口。
- * - 当客户表未提供时，跳过客户表导入并在响应中给出提示。
+ * 接口：
+ * - POST /api/import/base-customer：导入客户基础信息表，返回诚信互助小组编码映射
+ * - POST /api/import/cigarette：导入卷烟投放基础信息表
  *
  * @author Robin
- * @version 1.0
- * @since 2025-11-30
+ * @version 2.0
+ * @since 2025-12-22
  */
 @Slf4j
 @RestController
@@ -39,49 +40,37 @@ public class ExcelImportController {
     
     @Autowired
     private ExcelImportService excelImportService;
-    
-    @Autowired
-    private ExcelImportConverter converter;
 
     /**
-     * 统一数据导入接口（客户表可选，卷烟表必传）。
+     * 导入客户基础信息表。
+     * <p>
+     * 功能：
+     * - 全量覆盖 base_customer_info 表
+     * - 同步刷新诚信互助小组编码映射表
+     * - 返回诚信互助小组编码映射信息
+     * </p>
      *
-     * 支持场景：
-     * - 全量导入：同时导入客户基础信息表 + 卷烟投放基础信息表。
-     * - 快速导入：仅导入卷烟投放基础信息表（客户表缺省时自动跳过）。
-     *
-     * 参数与校验：
-     * - 卷烟表（必传）：校验存在与大小限制。
-     * - 客户表（可选）：存在则导入，不传则跳过并在响应中提示"未提供客户基础信息表，本次未更新"。
-     * - year/month/weekSeq：用于卷烟表分区定位。
-     *
-     * 返回：
-     * - success=true/false
-     * - baseCustomerInfoResult：客户表导入结果或跳过提示
-     * - cigaretteDistributionInfoResult：卷烟表导入结果
+     * @param requestVo 包含客户基础信息表Excel文件
+     * @return 导入结果，包含 integrityGroupMapping
      */
-    @PostMapping("/data")
-    public ResponseEntity<ApiResponseVo<DataImportResponseVo>> importData(@Valid DataImportRequestVo requestVo) {
-        log.info("接收统一数据导入请求，年份: {}, 月份: {}, 周序号: {}",
-                requestVo.getYear(), requestVo.getMonth(), requestVo.getWeekSeq());
+    @PostMapping("/base-customer")
+    public ResponseEntity<ApiResponseVo<BaseCustomerInfoImportResponseVo>> importBaseCustomerInfo(
+            @Valid BaseCustomerInfoImportRequestVo requestVo) {
+        log.info("接收客户基础信息表导入请求");
 
         try {
             // 文件校验
-            ResponseEntity<Map<String, Object>> cigValidation = UploadValidators.validateRequiredFile(
-                    requestVo.getCigaretteDistributionInfoFile(),
-                    "请选择卷烟投放基础信息表Excel文件",
-                    "CIGARETTE_DISTRIBUTION_FILE_EMPTY",
+            ResponseEntity<Map<String, Object>> validation = UploadValidators.validateRequiredFile(
+                    requestVo.getFile(),
+                    "请选择客户基础信息表Excel文件",
+                    "BASE_CUSTOMER_FILE_EMPTY",
                     10 * 1024 * 1024L,
-                    "卷烟投放基础信息表文件大小超过限制（最大10MB）",
-                    "CIGARETTE_DISTRIBUTION_FILE_TOO_LARGE"
+                    "客户基础信息表文件大小超过限制（最大10MB）",
+                    "BASE_CUSTOMER_FILE_TOO_LARGE"
             );
-            if (cigValidation != null) {
-                // 校验失败，转换为统一响应格式
-                Map<String, Object> errorBody = cigValidation.getBody();
+            if (validation != null) {
+                Map<String, Object> errorBody = validation.getBody();
                 if (errorBody != null) {
-                    DataImportResponseVo errorVo = new DataImportResponseVo();
-                    errorVo.setSuccess(false);
-                    errorVo.setMessage((String) errorBody.get("message"));
                     return ResponseEntity.badRequest().body(ApiResponseVo.error(
                         (String) errorBody.get("message"),
                         (String) errorBody.get("errorCode")
@@ -94,34 +83,113 @@ public class ExcelImportController {
             }
 
             // VO 转 DTO
-            DataImportRequestDto requestDto = converter.toDto(requestVo);
-
-            boolean hasBaseFile = requestVo.getBaseCustomerInfoFile() != null && !requestVo.getBaseCustomerInfoFile().isEmpty();
+            BaseCustomerInfoImportRequestDto requestDto = new BaseCustomerInfoImportRequestDto();
+            requestDto.setFile(requestVo.getFile());
             
             // 执行导入
-            Map<String, Object> importResult = excelImportService.importData(requestDto);
+            Map<String, Object> importResult = excelImportService.importBaseCustomerInfo(requestDto);
 
-            if (!hasBaseFile) {
-                importResult.put("baseCustomerInfoNotice", "未提供客户基础信息表，本次未更新");
-            }
+            // 构建响应VO
+            BaseCustomerInfoImportResponseVo responseVo = new BaseCustomerInfoImportResponseVo();
+            responseVo.setSuccess((Boolean) importResult.get("success"));
+            responseVo.setMessage((String) importResult.get("message"));
+            responseVo.setInsertedCount((Integer) importResult.get("insertedCount"));
+            responseVo.setProcessedCount((Integer) importResult.get("processedCount"));
+            responseVo.setTableName((String) importResult.get("tableName"));
+            responseVo.setIntegrityGroupMapping((Map<String, Object>) importResult.get("integrityGroupMapping"));
 
-            // Map 转 VO
-            DataImportResponseVo responseVo = converter.toVo(importResult);
-
-            if ((Boolean) importResult.get("success")) {
-                log.info("统一数据导入成功，年份: {}, 月份: {}, 周序号: {}",
-                        requestVo.getYear(), requestVo.getMonth(), requestVo.getWeekSeq());
+            if (Boolean.TRUE.equals(importResult.get("success"))) {
+                log.info("客户基础信息表导入成功");
                 return ResponseEntity.ok(ApiResponseVo.success(responseVo, responseVo.getMessage()));
             } else {
-                log.warn("统一数据导入失败: {}", importResult.get("message"));
+                log.warn("客户基础信息表导入失败: {}", importResult.get("message"));
                 return ResponseEntity.badRequest().body(ApiResponseVo.error(
-                    responseVo.getMessage() != null ? responseVo.getMessage() : "数据导入失败",
+                    responseVo.getMessage() != null ? responseVo.getMessage() : "导入失败",
                     "IMPORT_FAILED"
                 ));
             }
 
         } catch (Exception e) {
-            log.error("统一数据导入失败", e);
+            log.error("客户基础信息表导入失败", e);
+            return ResponseEntity.ok(ApiResponseVo.error(
+                "导入失败: " + e.getMessage(), 
+                "IMPORT_FAILED"
+            ));
+        }
+    }
+
+    /**
+     * 导入卷烟投放基础信息表。
+     * <p>
+     * 功能：
+     * - 覆盖 cigarette_distribution_info 对应分区数据
+     * - 执行业务合法性校验（全市占比、货源属性规则等）
+     * </p>
+     *
+     * @param requestVo 包含年份、月份、周序号及Excel文件
+     * @return 导入结果
+     */
+    @PostMapping("/cigarette")
+    public ResponseEntity<ApiResponseVo<CigaretteImportResponseVo>> importCigaretteDistributionInfo(
+            @Valid CigaretteImportRequestVo requestVo) {
+        log.info("接收卷烟投放基础信息表导入请求，年份: {}, 月份: {}, 周序号: {}",
+                requestVo.getYear(), requestVo.getMonth(), requestVo.getWeekSeq());
+
+        try {
+            // 文件校验
+            ResponseEntity<Map<String, Object>> validation = UploadValidators.validateRequiredFile(
+                    requestVo.getFile(),
+                    "请选择卷烟投放基础信息表Excel文件",
+                    "CIGARETTE_FILE_EMPTY",
+                    10 * 1024 * 1024L,
+                    "卷烟投放基础信息表文件大小超过限制（最大10MB）",
+                    "CIGARETTE_FILE_TOO_LARGE"
+            );
+            if (validation != null) {
+                Map<String, Object> errorBody = validation.getBody();
+                if (errorBody != null) {
+                    return ResponseEntity.badRequest().body(ApiResponseVo.error(
+                        (String) errorBody.get("message"),
+                        (String) errorBody.get("errorCode")
+                    ));
+                }
+                return ResponseEntity.badRequest().body(ApiResponseVo.error(
+                    "文件校验失败", 
+                    "VALIDATION_FAILED"
+                ));
+            }
+
+            // VO 转 DTO
+            CigaretteImportRequestDto requestDto = new CigaretteImportRequestDto();
+            requestDto.setFile(requestVo.getFile());
+            requestDto.setYear(requestVo.getYear());
+            requestDto.setMonth(requestVo.getMonth());
+            requestDto.setWeekSeq(requestVo.getWeekSeq());
+            
+            // 执行导入
+            Map<String, Object> importResult = excelImportService.importCigaretteDistributionInfo(requestDto);
+
+            // 构建响应VO
+            CigaretteImportResponseVo responseVo = new CigaretteImportResponseVo();
+            responseVo.setSuccess((Boolean) importResult.get("success"));
+            responseVo.setMessage((String) importResult.get("message"));
+            responseVo.setInsertedCount((Integer) importResult.get("insertedCount"));
+            responseVo.setTotalRows((Integer) importResult.get("totalRows"));
+
+            if (Boolean.TRUE.equals(importResult.get("success"))) {
+                log.info("卷烟投放基础信息表导入成功，年份: {}, 月份: {}, 周序号: {}",
+                        requestVo.getYear(), requestVo.getMonth(), requestVo.getWeekSeq());
+                return ResponseEntity.ok(ApiResponseVo.success(responseVo, responseVo.getMessage()));
+            } else {
+                log.warn("卷烟投放基础信息表导入失败: {}", importResult.get("message"));
+                return ResponseEntity.badRequest().body(ApiResponseVo.error(
+                    responseVo.getMessage() != null ? responseVo.getMessage() : "导入失败",
+                    "IMPORT_FAILED"
+                ));
+            }
+
+        } catch (Exception e) {
+            log.error("卷烟投放基础信息表导入失败", e);
             return ResponseEntity.ok(ApiResponseVo.error(
                 "导入失败: " + e.getMessage(), 
                 "IMPORT_FAILED"
@@ -129,4 +197,3 @@ public class ExcelImportController {
         }
     }
 }
-

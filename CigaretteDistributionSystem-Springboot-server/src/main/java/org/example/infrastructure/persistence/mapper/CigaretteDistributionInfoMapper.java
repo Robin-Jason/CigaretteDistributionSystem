@@ -67,6 +67,40 @@ public interface CigaretteDistributionInfoMapper extends BaseMapper<CigaretteDis
     List<Map<String, Object>> findPriceBandCandidates(@Param("year") Integer year,
                                                       @Param("month") Integer month,
                                                       @Param("weekSeq") Integer weekSeq);
+
+    /**
+     * 按卷烟代码和卷烟名称查询指定分区的投放信息。
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @param cigCode 卷烟代码
+     * @param cigName 卷烟名称
+     * @return 该卷烟的投放信息
+     */
+    Map<String, Object> findByCigCodeAndName(@Param("year") Integer year,
+                                              @Param("month") Integer month,
+                                              @Param("weekSeq") Integer weekSeq,
+                                              @Param("cigCode") String cigCode,
+                                              @Param("cigName") String cigName);
+
+    /**
+     * 更新指定卷烟的备注字段
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @param cigCode 卷烟代码
+     * @param cigName 卷烟名称
+     * @param remark  备注内容
+     * @return 影响行数
+     */
+    int updateRemark(@Param("year") Integer year,
+                     @Param("month") Integer month,
+                     @Param("weekSeq") Integer weekSeq,
+                     @Param("cigCode") String cigCode,
+                     @Param("cigName") String cigName,
+                     @Param("remark") String remark);
 }
 
 

@@ -2,16 +2,18 @@ package org.example.application.service.writeback.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.application.service.writeback.DistributionWriteBackService;
+import org.example.application.service.encode.EncodeService;
+import org.example.application.service.writeback.PriceBandDistributionWriteBackService;
 import org.example.domain.repository.CigaretteDistributionPredictionPriceRepository;
 import org.example.shared.util.ActualDeliveryCalculator;
 import org.example.shared.util.PartitionTableManager;
 import org.example.shared.util.WriteBackHelper;
-import org.example.infrastructure.persistence.po.CigaretteDistributionPredictionPO;
+import org.example.infrastructure.persistence.po.CigaretteDistributionPredictionPricePO;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -25,30 +27,11 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PriceBandDistributionWriteBackServiceImpl implements DistributionWriteBackService {
+public class PriceBandDistributionWriteBackServiceImpl implements PriceBandDistributionWriteBackService {
 
     private final CigaretteDistributionPredictionPriceRepository predictionPriceRepository;
     private final PartitionTableManager partitionTableManager;
-
-    @Override
-    public boolean writeBackSingleCigarette(BigDecimal[][] allocationMatrix,
-                                            BigDecimal[][] customerMatrix,
-                                            List<String> targetList,
-                                            String cigCode,
-                                            String cigName,
-                                            Integer year,
-                                            Integer month,
-                                            Integer weekSeq,
-                                            String deliveryMethod,
-                                            String deliveryEtype,
-                                            String remark,
-                                            String tag,
-                                            String tagFilterConfig) {
-        // 价位段写回服务不支持单条卷烟写回（标准场景）
-        // 该方法应由 StandardDistributionWriteBackServiceImpl 实现
-        throw new UnsupportedOperationException(
-                "PriceBandDistributionWriteBackServiceImpl 不支持单条卷烟写回，请使用 StandardDistributionWriteBackServiceImpl");
-    }
+    private final EncodeService encodeService;
 
     @Override
     public void writeBackPriceBandAllocations(List<Map<String, Object>> candidates,
@@ -73,7 +56,7 @@ public class PriceBandDistributionWriteBackServiceImpl implements DistributionWr
             log.warn("清理旧的价位段自选投放数据失败，继续写回: {}", e.getMessage());
         }
 
-        List<CigaretteDistributionPredictionPO> predictionList = new ArrayList<>();
+        List<CigaretteDistributionPredictionPricePO> predictionList = new ArrayList<>();
 
         for (Map<String, Object> row : candidates) {
             String cigCode = WriteBackHelper.getString(row, "CIG_CODE");
@@ -83,6 +66,8 @@ public class PriceBandDistributionWriteBackServiceImpl implements DistributionWr
             String deliveryEtype = WriteBackHelper.getString(row, "DELIVERY_ETYPE");
             String tag = WriteBackHelper.getString(row, "TAG");
             String tagFilterConfig = WriteBackHelper.getString(row, "TAG_FILTER_CONFIG");
+            // 从 Info 表获取的备注（BZ 字段）
+            String remark = WriteBackHelper.getString(row, "BZ");
 
             if (cigCode == null || cigName == null) {
                 log.warn("跳过写回：卷烟代码或名称为空，row={}", row);
@@ -99,7 +84,7 @@ public class PriceBandDistributionWriteBackServiceImpl implements DistributionWr
             BigDecimal actualDelivery = ActualDeliveryCalculator.calculateFixed30(grades, cityCustomerRow);
 
             // 构建 PO 对象
-            CigaretteDistributionPredictionPO po = new CigaretteDistributionPredictionPO();
+            CigaretteDistributionPredictionPricePO po = new CigaretteDistributionPredictionPricePO();
             po.setYear(year);
             po.setMonth(month);
             po.setWeekSeq(weekSeq);
@@ -111,10 +96,19 @@ public class PriceBandDistributionWriteBackServiceImpl implements DistributionWr
             po.setTag(tag);
             po.setTagFilterConfig(tagFilterConfig);
             po.setActualDelivery(actualDelivery);
-            po.setBz("价位段自选投放算法自动生成");
+            // 使用从 Info 表获取的备注，如果为空则使用默认值
+            po.setBz((remark != null && !remark.trim().isEmpty()) ? remark : "价位段自选投放算法自动生成");
 
             // 使用 WriteBackHelper 设置档位值（D30-D1）
             WriteBackHelper.setGradesToEntity(po, grades);
+            
+            // 通过 EncodeService 生成编码表达式（复用 encodeForSpecificArea）
+            // 价位段自选投放的区域都是"全市"，传入单条记录列表即可
+            String deployinfoCode = encodeService.encodeForSpecificArea(
+                    cigCode, cigName, 
+                    po.getDeliveryMethod(), deliveryEtype, 
+                    po.getDeliveryArea(), Collections.singletonList(po));
+            po.setDeployinfoCode(deployinfoCode);
 
             predictionList.add(po);
         }

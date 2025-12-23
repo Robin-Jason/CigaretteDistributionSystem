@@ -1,11 +1,11 @@
 package org.example.fullpipeline;
 
 import lombok.extern.slf4j.Slf4j;
-import org.example.application.service.calculate.DistributionCalculateService;
+import org.example.application.service.calculate.StandardAllocationService;
 import org.example.application.service.coordinator.RegionCustomerStatisticsBuildService;
 import org.example.shared.util.PartitionTableManager;
-import org.example.application.dto.GenerateDistributionPlanRequestDto;
-import org.example.application.dto.GenerateDistributionPlanResponseDto;
+import org.example.application.dto.allocation.GenerateDistributionPlanRequestDto;
+import org.example.application.dto.allocation.GenerateDistributionPlanResponseDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -30,7 +30,7 @@ public class DualPeriodFullPipelineTest {
     private RegionCustomerStatisticsBuildService regionCustomerStatisticsBuildService;
 
     @Autowired
-    private DistributionCalculateService distributionCalculateService;
+    private StandardAllocationService distributionCalculateService;
 
     @Autowired
     private PartitionTableManager partitionTableManager;

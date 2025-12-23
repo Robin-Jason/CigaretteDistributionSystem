@@ -45,23 +45,23 @@ public class TagExtractionServiceImpl implements TagExtractionService {
     }
 
     @Override
-    public List<org.example.domain.model.tag.TagFilterRule> resolveTagFilters(Map<String, Object> cigaretteInfo) {
+    public List<org.example.domain.model.tag.TagFilter> resolveTagFilters(Map<String, Object> cigaretteInfo) {
         List<String> tags = extractTags(cigaretteInfo);
         if (tags.isEmpty()) {
             return Collections.emptyList();
         }
 
-        Map<String, org.example.domain.model.tag.TagFilterRule> configRules = parseTagFilterConfig(cigaretteInfo);
-        List<org.example.domain.model.tag.TagFilterRule> result = new ArrayList<>();
+        Map<String, org.example.domain.model.tag.TagFilter> configRules = parseTagFilterConfig(cigaretteInfo);
+        List<org.example.domain.model.tag.TagFilter> result = new ArrayList<>();
 
         for (String tag : tags) {
-            org.example.domain.model.tag.TagFilterRule rule = configRules.get(tag);
+            org.example.domain.model.tag.TagFilter rule = configRules.get(tag);
             if (rule != null) {
                 result.add(rule);
             } else {
                 // 没有在 TAG_FILTER_CONFIG 中定义过滤规则的标签：
                 // 仅用于区域名称拼接，不参与SQL过滤
-                result.add(new org.example.domain.model.tag.TagFilterRule(tag, null, "=", null, org.example.domain.model.tag.TagFilterRule.ValueType.STRING));
+                result.add(new org.example.domain.model.tag.TagFilter(tag, null, "=", null, org.example.domain.model.tag.TagFilter.ValueType.STRING));
             }
         }
 
@@ -99,7 +99,7 @@ public class TagExtractionServiceImpl implements TagExtractionService {
         return TAG_FILTER_RULE.combineRegionWithTags(regionName, tags);
     }
 
-    private Map<String, org.example.domain.model.tag.TagFilterRule> parseTagFilterConfig(Map<String, Object> cigaretteInfo) {
+    private Map<String, org.example.domain.model.tag.TagFilter> parseTagFilterConfig(Map<String, Object> cigaretteInfo) {
         Object configObject = cigaretteInfo != null ? cigaretteInfo.get("TAG_FILTER_CONFIG") : null;
         if (configObject == null) {
             // 尝试大小写不敏感匹配
@@ -122,7 +122,7 @@ public class TagExtractionServiceImpl implements TagExtractionService {
             return Collections.emptyMap();
         }
 
-        Map<String, org.example.domain.model.tag.TagFilterRule> rules = new HashMap<>();
+        Map<String, org.example.domain.model.tag.TagFilter> rules = new HashMap<>();
         try {
             JsonNode root = OBJECT_MAPPER.readTree(json);
             if (root == null || !root.isObject()) {
@@ -139,10 +139,10 @@ public class TagExtractionServiceImpl implements TagExtractionService {
                 String column = getText(node, "column");
                 String operator = getText(node, "operator");
                 String value = getText(node, "value");
-                org.example.domain.model.tag.TagFilterRule.ValueType valueType = org.example.domain.model.tag.TagFilterRule.ValueType.from(getText(node, "valueType"));
+                org.example.domain.model.tag.TagFilter.ValueType valueType = org.example.domain.model.tag.TagFilter.ValueType.from(getText(node, "valueType"));
 
                 if (column != null && !column.trim().isEmpty()) {
-                    rules.put(tagName, new org.example.domain.model.tag.TagFilterRule(tagName, column.trim(), operator, value, valueType));
+                    rules.put(tagName, new org.example.domain.model.tag.TagFilter(tagName, column.trim(), operator, value, valueType));
                 }
             });
         } catch (Exception e) {

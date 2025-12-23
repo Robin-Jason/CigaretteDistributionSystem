@@ -2,7 +2,7 @@ package org.example.api.web.converter;
 
 import org.example.api.web.vo.request.DataImportRequestVo;
 import org.example.api.web.vo.response.DataImportResponseVo;
-import org.example.application.dto.DataImportRequestDto;
+import org.example.application.dto.importing.DataImportRequestDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
@@ -38,6 +38,7 @@ public interface ExcelImportConverter {
         vo.setBaseCustomerInfoResult((java.util.Map<String, Object>) resultMap.get("baseCustomerInfoResult"));
         vo.setCigaretteDistributionInfoResult((java.util.Map<String, Object>) resultMap.get("cigaretteDistributionInfoResult"));
         vo.setBaseCustomerInfoNotice((String) resultMap.get("baseCustomerInfoNotice"));
+        vo.setIntegrityGroupMapping((java.util.Map<String, Object>) resultMap.get("integrityGroupMapping"));
         return vo;
     }
 }

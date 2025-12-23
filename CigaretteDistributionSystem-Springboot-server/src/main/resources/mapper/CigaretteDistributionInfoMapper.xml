@@ -11,9 +11,10 @@
     <insert id="upsert" parameterType="org.example.infrastructure.persistence.po.CigaretteDistributionInfoPO">
         INSERT INTO `cigarette_distribution_info`
         (YEAR, MONTH, WEEK_SEQ, CIG_CODE, CIG_NAME, SUPPLY_ATTRIBUTE, URS, DELIVERY_METHOD, DELIVERY_ETYPE, TAG,
-         ADV, DELIVERY_AREA, BZ, TAG_FILTER_CONFIG)
+         ADV, DELIVERY_AREA, BZ, TAG_FILTER_CONFIG, HIGHEST_GRADE, LOWEST_GRADE)
         VALUES (#{year}, #{month}, #{weekSeq}, #{cigCode}, #{cigName}, #{supplyAttribute}, #{urs},
-                #{deliveryMethod}, #{deliveryEtype}, #{tag}, #{adv}, #{deliveryArea}, #{bz}, #{tagFilterConfig})
+                #{deliveryMethod}, #{deliveryEtype}, #{tag}, #{adv}, #{deliveryArea}, #{bz}, #{tagFilterConfig},
+                #{highestGrade}, #{lowestGrade})
         ON DUPLICATE KEY UPDATE
             SUPPLY_ATTRIBUTE = VALUES(SUPPLY_ATTRIBUTE),
             URS              = VALUES(URS),
@@ -24,6 +25,8 @@
             DELIVERY_AREA    = VALUES(DELIVERY_AREA),
             BZ               = VALUES(BZ),
             TAG_FILTER_CONFIG= VALUES(TAG_FILTER_CONFIG),
+            HIGHEST_GRADE    = VALUES(HIGHEST_GRADE),
+            LOWEST_GRADE     = VALUES(LOWEST_GRADE),
             UPDATED_AT       = CURRENT_TIMESTAMP
     </insert>
 
@@ -31,11 +34,12 @@
     <insert id="batchUpsert" parameterType="java.util.List">
         INSERT INTO `cigarette_distribution_info`
         (YEAR, MONTH, WEEK_SEQ, CIG_CODE, CIG_NAME, SUPPLY_ATTRIBUTE, URS, DELIVERY_METHOD, DELIVERY_ETYPE, TAG,
-         ADV, DELIVERY_AREA, BZ, TAG_FILTER_CONFIG)
+         ADV, DELIVERY_AREA, BZ, TAG_FILTER_CONFIG, HIGHEST_GRADE, LOWEST_GRADE)
         VALUES
         <foreach collection="list" item="item" separator=",">
             (#{item.year}, #{item.month}, #{item.weekSeq}, #{item.cigCode}, #{item.cigName}, #{item.supplyAttribute}, #{item.urs},
-             #{item.deliveryMethod}, #{item.deliveryEtype}, #{item.tag}, #{item.adv}, #{item.deliveryArea}, #{item.bz}, #{item.tagFilterConfig})
+             #{item.deliveryMethod}, #{item.deliveryEtype}, #{item.tag}, #{item.adv}, #{item.deliveryArea}, #{item.bz}, #{item.tagFilterConfig},
+             #{item.highestGrade}, #{item.lowestGrade})
         </foreach>
         ON DUPLICATE KEY UPDATE
             SUPPLY_ATTRIBUTE = VALUES(SUPPLY_ATTRIBUTE),
@@ -47,6 +51,8 @@
             DELIVERY_AREA    = VALUES(DELIVERY_AREA),
             BZ               = VALUES(BZ),
             TAG_FILTER_CONFIG= VALUES(TAG_FILTER_CONFIG),
+            HIGHEST_GRADE    = VALUES(HIGHEST_GRADE),
+            LOWEST_GRADE     = VALUES(LOWEST_GRADE),
             UPDATED_AT       = CURRENT_TIMESTAMP
     </insert>
 
@@ -62,6 +68,8 @@
             DELIVERY_AREA    = #{deliveryArea},
             BZ               = #{bz},
             TAG_FILTER_CONFIG= #{tagFilterConfig},
+            HIGHEST_GRADE    = #{highestGrade},
+            LOWEST_GRADE     = #{lowestGrade},
             UPDATED_AT       = CURRENT_TIMESTAMP
         WHERE YEAR = #{year}
           AND MONTH = #{month}
@@ -91,6 +99,7 @@
             i.DELIVERY_METHOD,
             NULL AS DELIVERY_ETYPE,
             MAX(i.ADV) AS ADV,
+            MAX(i.BZ) AS BZ,
             p.WHOLESALE_PRICE
         FROM `cigarette_distribution_info` i
         JOIN `base_cigarette_price` p
@@ -101,6 +110,46 @@
           AND i.DELIVERY_METHOD = '按价位段自选投放'
         GROUP BY i.CIG_CODE, i.CIG_NAME, i.YEAR, i.MONTH, i.WEEK_SEQ, i.DELIVERY_METHOD, p.WHOLESALE_PRICE
     </select>
+
+    <!-- 按卷烟代码和卷烟名称查询指定分区的投放信息 -->
+    <select id="findByCigCodeAndName" resultType="java.util.LinkedHashMap">
+        SELECT
+            YEAR,
+            MONTH,
+            WEEK_SEQ,
+            CIG_CODE,
+            CIG_NAME,
+            SUPPLY_ATTRIBUTE,
+            URS,
+            DELIVERY_METHOD,
+            DELIVERY_ETYPE,
+            TAG,
+            ADV,
+            DELIVERY_AREA,
+            BZ,
+            TAG_FILTER_CONFIG,
+            HIGHEST_GRADE,
+            LOWEST_GRADE
+        FROM `cigarette_distribution_info`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND CIG_CODE = #{cigCode}
+          AND CIG_NAME = #{cigName}
+        LIMIT 1
+    </select>
+
+    <!-- 更新指定卷烟的备注字段 -->
+    <update id="updateRemark">
+        UPDATE `cigarette_distribution_info`
+        SET BZ = #{remark},
+            UPDATED_AT = CURRENT_TIMESTAMP
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND CIG_CODE = #{cigCode}
+          AND CIG_NAME = #{cigName}
+    </update>
 
 </mapper>
 

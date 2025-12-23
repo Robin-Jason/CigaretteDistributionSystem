@@ -168,5 +168,47 @@
           AND WEEK_SEQ = #{weekSeq}
     </delete>
 
+    <!-- 删除指定卷烟的所有区域记录 -->
+    <delete id="deleteByCigarette">
+        DELETE FROM `cigarette_distribution_prediction`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND CIG_CODE = #{cigCode}
+          AND CIG_NAME = #{cigName}
+    </delete>
+
+    <!-- 删除指定卷烟的特定区域记录 -->
+    <delete id="deleteByDeliveryArea">
+        DELETE FROM `cigarette_distribution_prediction`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND CIG_CODE = #{cigCode}
+          AND CIG_NAME = #{cigName}
+          AND DELIVERY_AREA = #{deliveryArea}
+    </delete>
+
+    <!-- 统计指定卷烟的区域记录数 -->
+    <select id="countByCigarette" resultType="int">
+        SELECT COUNT(*)
+        FROM `cigarette_distribution_prediction`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+          AND CIG_CODE = #{cigCode}
+          AND CIG_NAME = #{cigName}
+    </select>
+
+    <!-- 查询指定分区的不重复投放组合 -->
+    <select id="findDistinctCombinations" resultType="map">
+        SELECT DISTINCT DELIVERY_METHOD, DELIVERY_ETYPE, TAG
+        FROM `cigarette_distribution_prediction`
+        WHERE YEAR = #{year}
+          AND MONTH = #{month}
+          AND WEEK_SEQ = #{weekSeq}
+        ORDER BY DELIVERY_METHOD, DELIVERY_ETYPE, TAG
+    </select>
+
 </mapper>
 

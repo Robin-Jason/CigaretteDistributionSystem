@@ -1,0 +1,53 @@
+package org.example.application.service.writeback;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+/**
+ * 标准分配结果写回服务接口。
+ * <p>
+ * 负责按档位投放、按档位扩展投放等标准场景的分配结果写回操作。
+ * 支持多区域分配结果的写回，每条卷烟在独立事务中完成写回。
+ * </p>
+ *
+ * @author Robin
+ * @since 2025-12-22
+ */
+public interface StandardDistributionWriteBackService {
+
+    /**
+     * 单条卷烟写回分配矩阵（标准场景：按档位投放、按档位扩展投放等）。
+     * <p>
+     * 支持多区域分配结果的写回，每条卷烟在独立事务中完成写回。
+     * </p>
+     *
+     * @param allocationMatrix 分配矩阵（行=区域，列=档位D30-D1）
+     * @param customerMatrix   客户矩阵（可选，用于提升实际投放量计算精度）
+     * @param targetList       目标区域列表
+     * @param cigCode          卷烟代码
+     * @param cigName          卷烟名称
+     * @param year             年份
+     * @param month            月份
+     * @param weekSeq          周序号
+     * @param deliveryMethod   投放方式
+     * @param deliveryEtype    扩展投放类型
+     * @param remark           备注
+     * @param tag              标签
+     * @param tagFilterConfig  标签过滤配置
+     * @return 写回是否成功
+     * @example writeBackSingleCigarette(matrix, customerMatrix, ["城区", "郊区"], "001", "中华", 2025, 9, 3, "按档位投放", null, null, null, null)
+     */
+    boolean writeBackSingleCigarette(BigDecimal[][] allocationMatrix,
+                                     BigDecimal[][] customerMatrix,
+                                     List<String> targetList,
+                                     String cigCode,
+                                     String cigName,
+                                     Integer year,
+                                     Integer month,
+                                     Integer weekSeq,
+                                     String deliveryMethod,
+                                     String deliveryEtype,
+                                     String remark,
+                                     String tag,
+                                     String tagFilterConfig);
+}

@@ -67,5 +67,11 @@ public class CigaretteDistributionInfoPO {
 
     @TableField("BZ")
     private String bz;
+
+    @TableField("HIGHEST_GRADE")
+    private String highestGrade;
+
+    @TableField("LOWEST_GRADE")
+    private String lowestGrade;
 }
 

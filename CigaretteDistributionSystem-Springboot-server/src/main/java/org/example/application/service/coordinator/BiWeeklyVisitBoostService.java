@@ -1,6 +1,6 @@
 package org.example.application.service.coordinator;
 
-import org.example.application.orchestrator.allocation.RegionCustomerMatrix;
+import org.example.domain.model.valueobject.RegionCustomerMatrix;
 
 /**
  * “两周一访上浮100%”双周/单周客户上浮服务。

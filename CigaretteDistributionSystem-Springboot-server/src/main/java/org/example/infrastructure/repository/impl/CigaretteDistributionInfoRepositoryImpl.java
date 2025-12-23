@@ -120,5 +120,43 @@ public class CigaretteDistributionInfoRepositoryImpl implements CigaretteDistrib
         log.debug("查询价位段自选投放候选卷烟: {}-{}-{}, 返回 {} 条记录", year, month, weekSeq, result.size());
         return result;
     }
+
+    /**
+     * 按卷烟代码和卷烟名称查询指定分区的投放信息。
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @param cigCode 卷烟代码
+     * @param cigName 卷烟名称
+     * @return 该卷烟的投放信息，不存在时返回 null
+     */
+    @Override
+    public Map<String, Object> findByCigCodeAndName(Integer year, Integer month, Integer weekSeq, String cigCode, String cigName) {
+        partitionTableManager.ensurePartitionExists(TABLE_NAME, year, month, weekSeq);
+        Map<String, Object> result = cigaretteDistributionInfoMapper.findByCigCodeAndName(year, month, weekSeq, cigCode, cigName);
+        log.debug("按卷烟代码和名称查询投放信息: {}-{}-{}, cigCode={}, cigName={}, 结果={}", 
+                year, month, weekSeq, cigCode, cigName, result != null ? "找到" : "未找到");
+        return result;
+    }
+
+    /**
+     * 更新指定卷烟的备注字段
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @param cigCode 卷烟代码
+     * @param cigName 卷烟名称
+     * @param remark  备注内容
+     * @return 影响行数
+     */
+    @Override
+    public int updateRemark(Integer year, Integer month, Integer weekSeq, String cigCode, String cigName, String remark) {
+        log.debug("更新卷烟备注: {}-{}-{}, 卷烟: {}-{}, 备注: {}", year, month, weekSeq, cigCode, cigName, remark);
+        int count = cigaretteDistributionInfoMapper.updateRemark(year, month, weekSeq, cigCode, cigName, remark);
+        log.info("更新卷烟备注完成: {}-{}-{}, 卷烟: {}-{}, 影响 {} 条记录", year, month, weekSeq, cigCode, cigName, count);
+        return count;
+    }
 }
 

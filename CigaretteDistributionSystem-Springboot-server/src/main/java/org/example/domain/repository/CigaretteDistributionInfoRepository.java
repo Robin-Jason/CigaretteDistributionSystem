@@ -42,5 +42,30 @@ public interface CigaretteDistributionInfoRepository {
      * @return 候选卷烟列表，每条至少包含 CIG_CODE、CIG_NAME、DELIVERY_AREA、DELIVERY_METHOD、DELIVERY_ETYPE、WHOLESALE_PRICE 等字段
      */
     List<Map<String, Object>> findPriceBandCandidates(Integer year, Integer month, Integer weekSeq);
+
+    /**
+     * 按卷烟代码和卷烟名称查询指定分区的投放信息。
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @param cigCode 卷烟代码
+     * @param cigName 卷烟名称
+     * @return 该卷烟的投放信息（包含 DELIVERY_METHOD、DELIVERY_ETYPE、TAG、TAG_FILTER_CONFIG 等字段），不存在时返回 null
+     */
+    Map<String, Object> findByCigCodeAndName(Integer year, Integer month, Integer weekSeq, String cigCode, String cigName);
+
+    /**
+     * 更新指定卷烟的备注字段
+     *
+     * @param year    年份
+     * @param month   月份
+     * @param weekSeq 周序号
+     * @param cigCode 卷烟代码
+     * @param cigName 卷烟名称
+     * @param remark  备注内容
+     * @return 影响行数
+     */
+    int updateRemark(Integer year, Integer month, Integer weekSeq, String cigCode, String cigName, String remark);
 }
 

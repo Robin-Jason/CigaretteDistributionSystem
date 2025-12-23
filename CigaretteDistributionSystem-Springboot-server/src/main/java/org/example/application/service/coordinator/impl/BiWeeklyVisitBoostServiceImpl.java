@@ -8,8 +8,8 @@ import org.example.domain.repository.FilterCustomerTableRepository;
 import org.example.domain.service.rule.BiWeeklyVisitBoostRule;
 import org.example.shared.util.CombinationStrategyAnalyzer;
 import org.example.shared.util.OrderCycleMatrixCalculator;
-import org.example.domain.model.tag.TagFilterRule;
-import org.example.application.orchestrator.allocation.RegionCustomerMatrix;
+import org.example.domain.model.tag.TagFilter;
+import org.example.domain.model.valueobject.RegionCustomerMatrix;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -100,7 +100,7 @@ public class BiWeeklyVisitBoostServiceImpl implements BiWeeklyVisitBoostService 
             return baseMatrix;
         }
 
-        List<TagFilterRule> tagRules = resolveTagRules(tag, extraInfo);
+        List<TagFilter> tagRules = resolveTagRules(tag, extraInfo);
 
         // 将RegionCustomerMatrix.Row转换为BiWeeklyVisitBoostRule.MatrixRow（使用原始数组引用，直接修改）
         Map<String, RegionCustomerMatrix.Row> rowIndex = new LinkedHashMap<>();
@@ -176,11 +176,11 @@ public class BiWeeklyVisitBoostServiceImpl implements BiWeeklyVisitBoostService 
      * <pre>
      *     Map<String, Object> extraInfo = new HashMap<>();
      *     extraInfo.put("TAG_FILTER_CONFIG", "{\"tag1\": {...}}");
-     *     List<TagFilterRule> rules = resolveTagRules("tag1", extraInfo);
-     *     // 返回: [TagFilterRule对象列表]
+     *     List<TagFilter> rules = resolveTagRules("tag1", extraInfo);
+     *     // 返回: [TagFilter对象列表]
      * </pre>
      */
-    private List<TagFilterRule> resolveTagRules(String tag, Map<String, Object> extraInfo) {
+    private List<TagFilter> resolveTagRules(String tag, Map<String, Object> extraInfo) {
         Map<String, Object> info = new HashMap<>();
         if (StringUtils.hasText(tag)) {
             info.put("TAG", tag);

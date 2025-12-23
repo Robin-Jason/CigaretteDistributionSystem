@@ -2,7 +2,8 @@ package org.example.application.service.importing.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
-import org.example.application.dto.DataImportRequestDto;
+import org.example.application.dto.importing.BaseCustomerInfoImportRequestDto;
+import org.example.application.dto.importing.CigaretteImportRequestDto;
 import org.example.application.service.importing.CigaretteImportValidator;
 import org.example.application.service.importing.ExcelImportService;
 import org.example.shared.constants.TableConstants;
@@ -25,10 +26,10 @@ import java.util.Map;
 
 /**
  * Excel导入服务实现类
- * <p>职责：编排统一导入流程，委托解析/校验/写入/映射刷新组件执行。</p>
+ * <p>职责：提供客户基础信息表和卷烟投放基础信息表的独立导入功能。</p>
  *
  * @author Robin
- * @version 1.1
+ * @version 2.0
  * @since 2025-12-11
  */
 @Slf4j
@@ -67,8 +68,9 @@ public class ExcelImportServiceImpl implements ExcelImportService {
     /**
      * 导入卷烟投放基础信息Excel
      */
+    @Override
     @Transactional(rollbackFor = Exception.class, timeout = 120)
-    private Map<String, Object> importCigaretteDistributionInfo(org.example.application.dto.CigaretteImportRequestDto request) {
+    public Map<String, Object> importCigaretteDistributionInfo(CigaretteImportRequestDto request) {
         Map<String, Object> result = new HashMap<>();
         
         try {
@@ -130,11 +132,12 @@ public class ExcelImportServiceImpl implements ExcelImportService {
      * 导入客户基础信息表 Excel。
      *
      * @param request 客户基础信息导入请求，包含 Excel 文件
-     * @return 导入结果
-     * @example 上传 base_customer_info.xlsx -> 重建表并插入数据，返回 success=true 与行数统计
+     * @return 导入结果，包含 integrityGroupMapping（诚信互助小组编码映射）
+     * @example 上传 base_customer_info.xlsx -> 重建表并插入数据，返回 success=true 与行数统计及诚信互助小组映射
      */
+    @Override
     @Transactional(rollbackFor = Exception.class, timeout = 120)
-    private Map<String, Object> importBaseCustomerInfo(org.example.application.dto.BaseCustomerInfoImportRequestDto request) {
+    public Map<String, Object> importBaseCustomerInfo(BaseCustomerInfoImportRequestDto request) {
         Map<String, Object> result = new HashMap<>();
         
         try {
@@ -180,7 +183,26 @@ public class ExcelImportServiceImpl implements ExcelImportService {
             result.put("insertedCount", stats.getInsertedCount());
             result.put("processedCount", stats.getProcessedCount());
             result.put("tableName", TableConstants.BASE_CUSTOMER_INFO);
-            result.put("integrityGroupMappings", integrityGroupMappings);
+            
+            // 诚信互助小组编码映射返回结构
+            Map<String, Object> integrityGroupInfo = new LinkedHashMap<>();
+            integrityGroupInfo.put("total", integrityGroupMappings.size());
+            integrityGroupInfo.put("updated", true);  // 标注已更新
+            // 根据是否有数据调整提示信息
+            if (integrityGroupMappings.isEmpty()) {
+                integrityGroupInfo.put("notice", "已根据本次导入的客户表重新生成映射，但客户表中无诚信互助小组数据");
+            } else {
+                integrityGroupInfo.put("notice", "已根据本次导入的客户表重新生成映射");
+            }
+            // 简洁映射：groupName -> groupCode，用于前端下拉选择或编码转换
+            Map<String, String> codeMapping = new LinkedHashMap<>();
+            for (Map<String, Object> mapping : integrityGroupMappings) {
+                codeMapping.put((String) mapping.get("groupName"), (String) mapping.get("groupCode"));
+            }
+            integrityGroupInfo.put("codeMapping", codeMapping);
+            // 详细列表：包含客户数等统计信息，用于展示
+            integrityGroupInfo.put("details", integrityGroupMappings);
+            result.put("integrityGroupMapping", integrityGroupInfo);
             
             log.info("客户基础信息导入完成，新增 {} 条，总计 {}", 
                     stats.getInsertedCount(), stats.getProcessedCount());
@@ -215,107 +237,4 @@ public class ExcelImportServiceImpl implements ExcelImportService {
         }
         return valid;
     }
-
-
-
-    /**
-     * 统一数据导入接口（客户表可选，卷烟表必传）。
-     *
-     * 场景：
-     * - 同时导入客户基础信息表与卷烟投放基础信息表（全量模式）。
-     * - 仅导入卷烟投放基础信息表（当客户表未提供时，客户表步骤跳过）。
-     *
-     * 流程：
-     * 1. 如提供客户基础信息表：覆盖 base_customer_info。
-     * 2. 必须提供卷烟投放基础信息表：覆盖 cigarette_distribution_info 对应分区。
-     *
-     * @param request 导入请求
-     * @return 导入结果
-     * @example 传入 base_customer_info.xlsx 与 cigarette_distribution_info.xlsx 且 year=2025, month=9, weekSeq=3 时，返回 success=true，包含两张表的导入统计
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class, timeout = 300)
-    public Map<String, Object> importData(DataImportRequestDto request) {
-        Map<String, Object> result = new HashMap<>();
-        
-        Long startTime = System.currentTimeMillis();
-        try {
-            boolean hasBaseFile = request.getBaseCustomerInfoFile() != null && !request.getBaseCustomerInfoFile().isEmpty();
-            boolean hasCigFile = request.getCigaretteDistributionInfoFile() != null && !request.getCigaretteDistributionInfoFile().isEmpty();
-            
-            // 发布开始事件
-            eventPublisher.publishEvent(new DataImportStartedEvent(
-                request.getYear(), request.getMonth(), request.getWeekSeq(),
-                hasBaseFile, hasCigFile
-            ));
-            
-            Map<String, Object> baseCustomerResult = new HashMap<>();
-            if (hasBaseFile) {
-            org.example.application.dto.BaseCustomerInfoImportRequestDto baseCustomerRequest = new org.example.application.dto.BaseCustomerInfoImportRequestDto();
-            baseCustomerRequest.setFile(request.getBaseCustomerInfoFile());
-            
-                baseCustomerResult = importBaseCustomerInfo(baseCustomerRequest);
-            if (!Boolean.TRUE.equals(baseCustomerResult.get("success"))) {
-                result.put("success", false);
-                result.put("message", "客户基础信息表导入失败: " + baseCustomerResult.get("message"));
-                result.put("baseCustomerInfoResult", baseCustomerResult);
-                return result;
-                }
-            } else {
-                baseCustomerResult.put("success", true);
-                baseCustomerResult.put("message", "未提供客户基础信息表，本次未更新");
-            }
-            
-            // 2. 导入卷烟投放基础信息表
-            org.example.application.dto.CigaretteImportRequestDto cigaretteRequest = new org.example.application.dto.CigaretteImportRequestDto();
-            cigaretteRequest.setFile(request.getCigaretteDistributionInfoFile());
-            cigaretteRequest.setYear(request.getYear());
-            cigaretteRequest.setMonth(request.getMonth());
-            cigaretteRequest.setWeekSeq(request.getWeekSeq());
-            
-            Map<String, Object> cigaretteResult = importCigaretteDistributionInfo(cigaretteRequest);
-            if (!Boolean.TRUE.equals(cigaretteResult.get("success"))) {
-                result.put("success", false);
-                result.put("message", "卷烟投放基础信息表导入失败: " + cigaretteResult.get("message"));
-                result.put("baseCustomerInfoResult", baseCustomerResult);
-                result.put("cigaretteDistributionInfoResult", cigaretteResult);
-                return result;
-            }
-            
-            // 3. 汇总结果
-            result.put("success", true);
-            result.put("message", "数据导入成功");
-            result.put("year", request.getYear());
-            result.put("month", request.getMonth());
-            result.put("weekSeq", request.getWeekSeq());
-            result.put("baseCustomerInfoResult", baseCustomerResult);
-            result.put("cigaretteDistributionInfoResult", cigaretteResult);
-            
-            // 发布完成事件
-            DataImportCompletedEvent completedEvent = new DataImportCompletedEvent(
-                    request.getYear(), request.getMonth(), request.getWeekSeq(),
-                true, "数据导入成功"
-            );
-            completedEvent.setBaseCustomerInfoResult(baseCustomerResult);
-            completedEvent.setCigaretteDistributionInfoResult(cigaretteResult);
-            completedEvent.setStartTime(startTime);
-            completedEvent.setEndTime(System.currentTimeMillis());
-            eventPublisher.publishEvent(completedEvent);
-            
-        } catch (Exception e) {
-            log.error("统一数据导入失败: {}-{}-{}", 
-                     request.getYear(), request.getMonth(), request.getWeekSeq(), e);
-            result.put("success", false);
-            result.put("message", "导入失败: " + e.getMessage());
-            
-            // 发布失败事件
-            eventPublisher.publishEvent(new DataImportFailedEvent(
-                request.getYear(), request.getMonth(), request.getWeekSeq(),
-                "导入失败: " + e.getMessage(), e
-            ));
-        }
-        
-        return result;
-    }
-
 }
